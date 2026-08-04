@@ -176,7 +176,7 @@ Obsidian/
 
 如果你喜欢我的插件，你可以在这里对我表达支持，谢谢！
 
-![[支持.png]]
+![支持](支持.png)
 
 - [问题反馈](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/issues)
 - [作者 GitHub](https://github.com/beimohai)
