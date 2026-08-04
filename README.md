@@ -168,7 +168,7 @@ Obsidian/
 
 If you like my plugin, you can support me here. Thank you!
 
-![[支持.png]]
+![支持](支持.png)
 
 - [Report a problem](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/issues)
 - [Author on GitHub](https://github.com/beimohai)
