@@ -1,0 +1,20 @@
+{
+  "name": "easy-bookkeeping",
+  "version": "2.0.0",
+  "description": "A local-first bookkeeping plugin for Obsidian",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production"
+  },
+  "keywords": ["obsidian", "bookkeeping", "finance", "markdown"],
+  "author": "北漠海",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "esbuild": "0.25.5",
+    "obsidian": "latest",
+    "typescript": "^5.8.3"
+  }
+}

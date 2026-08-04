@@ -1,0 +1,10 @@
+{
+  "id": "easy-bookkeeping",
+  "name": "Easy Bookkeeping",
+  "version": "2.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "本地优先的Obsidian记账插件：全键盘连续录入、移动表单、可配置仪表盘与Markdown账目。",
+  "author": "北漠海",
+  "authorUrl": "https://space.bilibili.com/1065768987",
+  "isDesktopOnly": false
+}
