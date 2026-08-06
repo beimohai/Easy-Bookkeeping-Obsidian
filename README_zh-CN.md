@@ -2,7 +2,9 @@
 
 <div align="center">
 
-[中文](README_zh-CN.md) | [English](README.md)
+<img src="src/assets/branding/logo.png" alt="Easy Bookkeeping Logo" width="96" />
+
+中文 | [English](README.md)
 
 </div>
 
@@ -124,7 +126,7 @@ npm run build
 - 可选择是否把算式同时写入备注，修改存储方式时可同步转换现有文件；
 - 删除支持二次确认和 0—15 秒可配置撤销时间；
 - 文件变更会自动刷新，必要时可手动重新扫描仪表盘；
-- 更新检查仅匹配 GitHub Release 的版本号和发布文件；可单独控制自动检查与自动下载。
+- 上传插件市场后由 Obsidian 负责更新；手动安装时可通过 GitHub Releases 或网盘重新下载新版。
 
 ### 9. 高度自定义与响应式界面
 
@@ -176,7 +178,7 @@ Obsidian/
 
 如果你喜欢我的插件，你可以在这里对我表达支持，谢谢！
 
-![支持](支持.png)
+![微信与支付宝收款码](src/assets/community/support.png)
 
 - [问题反馈](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/issues)
 - [作者 GitHub](https://github.com/beimohai)

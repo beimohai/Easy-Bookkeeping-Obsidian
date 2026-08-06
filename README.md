@@ -2,7 +2,9 @@
 
 <div align="center">
 
-[中文](README_zh-CN.md) | [English](README.md)
+<img src="src/assets/branding/logo.png" alt="Easy Bookkeeping Logo" width="96" />
+
+[中文](README_zh-CN.md) | English
 
 </div>
 
@@ -115,7 +117,7 @@ The production build generates `main.js` in the project root.
    - Expressions can optionally also be written to notes, and existing files can be converted after this setting changes;
    - Deletion supports a confirmation dialog and a configurable undo period from 0 to 15 seconds;
    - File changes refresh automatically, and the dashboard can also be rescanned manually;
-   - Update checks use the version number from GitHub Releases, with separate controls for automatic checking and automatic updating.
+   - After publication in the community plugin catalog, updates are handled by Obsidian. Manual installations can be updated by downloading the new files again from GitHub Releases or the cloud-drive mirror.
 
 9. **Extensive customization and multiple languages**
    - Type, necessity, category, and account presets support adding, deleting, renaming, unique custom codes, drag sorting, and default values;
@@ -168,7 +170,7 @@ Obsidian/
 
 If you like my plugin, you can support me here. Thank you!
 
-![支持](支持.png)
+![WeChat Pay and Alipay payment codes](src/assets/community/support.png)
 
 - [Report a problem](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/issues)
 - [Author on GitHub](https://github.com/beimohai)

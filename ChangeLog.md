@@ -1,5 +1,20 @@
 # 更新日志 Changelog
 
+* [V2.0.2](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.2) 2026-08-06
+  * 发布规范与文档
+    * 将插件版本同步到 2.0.2，并改用不带 `v` 的 GitHub tag。
+    * 修复 Obsidian 插件市场审核指出的 manifest 描述、作者链接、最低版本和样式赋值问题。
+    * Release 仅上传 `main.js`、`manifest.json`、`styles.css` 三个官方安装文件。
+    * README 增加插件 Logo、修正中英文切换链接，并同步 GitHub Releases 与夸克网盘安装说明。
+    * 去除插件内检查更新与自动下载更新功能，上传插件市场后交由 Obsidian 负责更新。
+  * Release compliance and documentation
+    * Updated the plugin version to 2.0.2 and switched GitHub tags to the non-`v` format.
+    * Fixed manifest metadata, author URL, minimum app version, and style-assignment issues reported by the community plugin review.
+    * Release assets now include only the three official installation files: `main.js`, `manifest.json`, and `styles.css`.
+    * Added the plugin logo to the READMEs, fixed bilingual language-switch links, and synchronized GitHub Releases plus Quark Drive installation notes.
+    * Removed the in-plugin update checker and automatic download updater; updates should be handled by Obsidian after community catalog publication.
+
+
 * V2.0.0 2026-08-04
   * 插件化重构
     * 将原有 Templater 与 Dataview 模板项目重构为独立的 Obsidian 插件，不再依赖其他社区插件。
@@ -39,7 +54,7 @@
     * 重做桌面、手机和平板响应式布局，改进触控拖动、输入框、按钮、对齐、安全区和横向滚动体验。
     * 修复打开仪表盘或设置交互时页面跳动、删除状态残留、空结果表头消失及多个移动端控件错位问题。
     * 修复手机端颜色选择框被设置布局拉伸为椭圆的问题。
-    * 新增页面保持模式、返回顶部按钮、社区支持面板、版本信息和 GitHub Release 更新检查与自动下载。
+    * 新增页面保持模式、返回顶部按钮、社区支持面板、版本信息和 GitHub Release 安装说明。
   * Plugin architecture
     * Rebuilt the original Templater and Dataview template project as a standalone Obsidian plugin with no community-plugin dependency.
     * Preserved one Markdown file per transaction with stable account, category, expression, and attachment properties.
@@ -78,7 +93,7 @@
     * Rebuilt responsive desktop, phone, and tablet layouts and improved touch sorting, inputs, actions, alignment, safe areas, and horizontal scrolling.
     * Fixed page jumps on dashboard or settings interaction, stale deletion state, missing empty-result headers, and multiple mobile control alignment issues.
     * Fixed the mobile color picker being stretched into an oval by the settings layout.
-    * Added dashboard state persistence, a back-to-top action, community panels, version details, and GitHub Release update checks and downloads.
+    * Added dashboard state persistence, a back-to-top action, community panels, version details, and GitHub Release installation notes.
 
 * [V1.4](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/commit/ff22802) 2025-07-25
   * 文档修复

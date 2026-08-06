@@ -1,4 +1,4 @@
-import { App, ButtonComponent, Modal, Notice, Platform, Plugin, Setting, TFile, TFolder, normalizePath, requestUrl, setIcon } from "obsidian";
+import { App, ButtonComponent, Modal, Notice, Platform, Plugin, Setting, TFile, TFolder, normalizePath, setIcon } from "obsidian";
 import { DashboardView, DASHBOARD_VIEW_TYPE } from "./dashboard-view";
 import { KeyboardEntryModal } from "./keyboard-entry-modal";
 import { BookkeepingSettingTab } from "./settings-tab";
@@ -7,20 +7,9 @@ import { TransactionStore } from "./transaction-store";
 import { DEFAULT_SETTINGS, type AnnualChartConfig, type AnnualChartMetric, type BookkeepingSettings, type CalendarWeekStart, type ChartKind, type ChartMetric, type DashboardChartConfig, type HeaderAction, type OptionField, type TableColumn, type Transaction, type TransactionType } from "./types";
 import { currentMonth, errorMessageZh, formatMoney } from "./utils";
 import logoUrl from "./assets/branding/logo.png";
-import { RELEASES_API_URL } from "./branding";
 import { I18nController, translate } from "./locales";
 
-interface GitHubReleaseAsset {
-  name: string;
-  browser_download_url: string;
-}
 
-interface GitHubRelease {
-  tag_name: string;
-  html_url: string;
-  body?: string;
-  assets: GitHubReleaseAsset[];
-}
 
 function attachVaultFolderSuggestions(app: App, input: HTMLInputElement): void {
   const folders = app.vault.getAllLoadedFiles().filter((file): file is TFolder => file instanceof TFolder && Boolean(file.path)).map((folder) => folder.path).sort();
@@ -82,10 +71,6 @@ export default class BookkeepingPlugin extends Plugin {
     });
     this.addSettingTab(new BookkeepingSettingTab(this.app, this));
     this.registerDomEvent(document, "keydown", (event) => this.handleGlobalShortcut(event));
-    if (this.settings.autoCheckUpdates || this.settings.autoUpdate) {
-      const checkedToday = this.settings.lastUpdateCheck === new Date().toISOString().slice(0, 10);
-      if (!checkedToday) window.setTimeout(() => void this.checkForUpdates(false), 3000);
-    }
 
     this.registerObsidianProtocolHandler("easy-bookkeeping", async (params) => {
       const type = params.type === "income" ? "收入" : params.type === "transfer" ? "转账" : "支出";
@@ -216,13 +201,13 @@ export default class BookkeepingPlugin extends Plugin {
   async openDashboard(): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
     if (existing) {
-      this.app.workspace.revealLeaf(existing);
+      void this.app.workspace.revealLeaf(existing);
       await (existing.view as DashboardView).refresh();
       return;
     }
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.setViewState({ type: DASHBOARD_VIEW_TYPE, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    void this.app.workspace.revealLeaf(leaf);
   }
 
   async refreshDashboards(): Promise<void> {
@@ -278,79 +263,20 @@ export default class BookkeepingPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
-  async checkForUpdates(showCurrentNotice = true): Promise<void> {
-    try {
-      const response = await requestUrl({
-        url: RELEASES_API_URL,
-        headers: { Accept: "application/vnd.github+json" }
-      });
-      const release = response.json as GitHubRelease;
-      this.settings.lastUpdateCheck = new Date().toISOString().slice(0, 10);
-      await this.saveSettingsQuietly();
-      if (!release?.tag_name) throw new Error("GitHub没有返回有效的Release版本");
-      const latest = release.tag_name.replace(/^v/i, "");
-      if (this.compareVersions(latest, this.manifest.version) <= 0) {
-        if (showCurrentNotice) this.notice(`当前已是最新版本（${this.manifest.version}）`);
-        return;
-      }
-      if (this.settings.autoUpdate) {
-        await this.installUpdate(release);
-        return;
-      }
-      new PluginUpdateModal(this.app, this, release).open();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error ?? "");
-      if (/404|not found/i.test(message)) {
-        this.settings.lastUpdateCheck = new Date().toISOString().slice(0, 10);
-        await this.saveSettingsQuietly();
-        if (showCurrentNotice) this.notice("GitHub暂无可用Release");
-      } else if (showCurrentNotice) this.notice(`检查更新失败：${errorMessageZh(error, "请稍后重试")}`);
-      else console.error("Easy Bookkeeping update check failed", error);
-    }
-  }
 
-  async installUpdate(release: GitHubRelease): Promise<void> {
-    const required = ["main.js", "manifest.json", "styles.css"];
-    const assets = new Map(release.assets.map((asset) => [asset.name, asset]));
-    const missing = required.filter((name) => !assets.has(name));
-    if (missing.length) throw new Error(`发布包缺少${missing.join("、")}`);
-    const pluginDir = this.manifest.dir;
-    if (!pluginDir) throw new Error("无法确定插件安装目录");
-    const downloadTargets = required.map((name) => ({ name, path: name }));
-    const downloads = await Promise.all(downloadTargets.map(async ({ name, path }) => {
-      const asset = assets.get(name) as GitHubReleaseAsset;
-      const response = await requestUrl({ url: asset.browser_download_url });
-      return { name, path, response };
-    }));
-    for (const { name, path: relativePath, response } of downloads) {
-      const path = normalizePath(`${pluginDir}/${relativePath}`);
-      if (name === "main.js") await this.app.vault.adapter.writeBinary(path, response.arrayBuffer);
-      else await this.app.vault.adapter.write(path, response.text);
-    }
-    this.notice(`已自动更新到${release.tag_name.replace(/^v/i, "")}，重启Obsidian后生效`, 8000);
-  }
 
   pluginLogoUrl(): string {
     return logoUrl;
   }
 
   applySemanticColors(element: HTMLElement): void {
-    element.style.setProperty("--bk-income", this.settings.incomeColor);
-    element.style.setProperty("--bk-expense", this.settings.expenseColor);
+    element.setCssProps({ "--bk-income": this.settings.incomeColor, "--bk-expense": this.settings.expenseColor });
   }
 
   semanticColor(kind: "income" | "expense"): string {
     return kind === "income" ? this.settings.incomeColor : this.settings.expenseColor;
   }
 
-  private compareVersions(left: string, right: string): number {
-    const a = left.split(/[.-]/).map((value) => Number.parseInt(value, 10) || 0);
-    const b = right.split(/[.-]/).map((value) => Number.parseInt(value, 10) || 0);
-    for (let index = 0; index < Math.max(a.length, b.length); index++) {
-      if ((a[index] ?? 0) !== (b[index] ?? 0)) return (a[index] ?? 0) - (b[index] ?? 0);
-    }
-    return 0;
-  }
 
   private async loadSettings(): Promise<void> {
     const loaded = await this.loadData() as Partial<BookkeepingSettings> | null;
@@ -592,7 +518,7 @@ class LegacyConverterModal extends Modal {
         if (!count) throw new Error("所选目录没有检测到旧版账目");
         const converted = await this.plugin.store.convertLegacyFiles((done, total) => {
         status.setText(`${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
-        fill.style.width = `${total ? done / total * 100 : 100}%`;
+        fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
         }, this.vaultFolder);
         message = `已转换${converted}个仓库内旧版账目`;
       } else {
@@ -600,7 +526,7 @@ class LegacyConverterModal extends Modal {
         if (!files.length) throw new Error("所选外部文件夹中没有Markdown文件");
         const result = await this.plugin.store.importExternalLegacyMarkdown(files, (done, total) => {
           status.setText(`${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
-          fill.style.width = `${total ? done / total * 100 : 100}%`;
+          fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
         });
         message = `已从外部导入${result.imported}笔，跳过或失败${result.failed}个文件`;
       }
@@ -610,7 +536,7 @@ class LegacyConverterModal extends Modal {
       } catch (convertError) {
         status.setText(errorMessageZh(convertError, "旧版账目转换失败"));
         status.addClass("mod-warning");
-        fill.style.width = "0%";
+        fill.setCssStyles({ width: "0%" });
         new ButtonComponent(this.contentEl).setButtonText("关闭").onClick(() => this.close());
       }
   }
@@ -669,7 +595,7 @@ class ExpressionStorageMigrationModal extends Modal {
     const fill = progress.createDiv({ cls: "bookkeeping-operation-progress-fill" });
     const count = await this.plugin.store.rewriteExpressionStorage((done, total) => {
       status.setText(`正在处理 ${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
-      fill.style.width = `${total ? done / total * 100 : 100}%`;
+      fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
     });
     await this.plugin.refreshDashboards();
     status.setText(`已同步${count}个账目文件`);
@@ -711,7 +637,7 @@ class CsvImportModal extends Modal {
     try {
       const result = await this.plugin.store.importCsv(this.text, (done, total) => {
         status.setText(`正在导入 ${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
-        fill.style.width = `${total ? done / total * 100 : 100}%`;
+        fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
       }, this.normalizeMetadata);
       await this.plugin.refreshDashboards();
       status.setText(`导入完成：成功${result.imported}笔，重复跳过${result.skipped}笔，失败${result.failures.length}笔。`);
@@ -904,7 +830,7 @@ class TagManagerModal extends Modal {
     const fill = progress.createDiv({ cls: "bookkeeping-operation-progress-fill" });
     const count = await this.plugin.store.updateTagGlobally(oldTag, newTag, (done, total) => {
       status.setText(`正在处理 ${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
-      fill.style.width = `${total ? done / total * 100 : 100}%`;
+      fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
     });
     await this.plugin.refreshDashboards();
     status.setText(newTag ? `已把#${oldTag}重命名为#${newTag}，影响${count}笔账目。` : `已从${count}笔账目删除#${oldTag}。`);
@@ -918,7 +844,7 @@ class TagManagerModal extends Modal {
     const fill = progress.createDiv({ cls: "bookkeeping-operation-progress-fill" });
     const count = await this.plugin.store.deleteTransactionsWithTag(tag, (done, total) => {
       status.setText(`正在删除 ${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
-      fill.style.width = `${total ? done / total * 100 : 100}%`;
+      fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
     });
     await this.plugin.refreshDashboards();
     status.setText(`已删除${count}笔包含#${tag}的账目。文件已移入系统回收站。`);
@@ -1157,23 +1083,3 @@ class AnnualChartSettingsModal extends Modal {
   }
 }
 
-class PluginUpdateModal extends Modal {
-  constructor(app: App, private readonly plugin: BookkeepingPlugin, private readonly release: GitHubRelease) { super(app); }
-
-  onOpen(): void {
-    this.modalEl.addClass("bookkeeping-modal", "bookkeeping-update-modal");
-    this.setTitle(`发现新版本 ${this.release.tag_name.replace(/^v/i, "")}`);
-    if (this.release.body?.trim()) this.contentEl.createEl("p", { text: this.release.body.trim().slice(0, 500), cls: "setting-item-description" });
-    const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
-    new ButtonComponent(actions).setButtonText("查看发布页").onClick(() => window.open(this.release.html_url, "_blank"));
-    new ButtonComponent(actions).setButtonText("暂不更新").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("立即更新").setCta().onClick(async () => {
-      try {
-        await this.plugin.installUpdate(this.release);
-        this.close();
-      } catch (error) {
-        this.plugin.notice(`更新失败：${errorMessageZh(error, "请稍后重试")}`);
-      }
-    });
-  }
-}

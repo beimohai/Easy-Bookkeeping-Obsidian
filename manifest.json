@@ -1,10 +1,10 @@
 {
   "id": "easy-bookkeeping",
   "name": "Easy Bookkeeping",
-  "version": "2.0.0",
-  "minAppVersion": "1.5.0",
-  "description": "Easy bookkeeping and expense tracking tool.",
+  "version": "2.0.2",
+  "minAppVersion": "1.8.0",
+  "description": "本地优先记账插件：全键盘连续录入、移动表单、可配置仪表盘与 Markdown 账目。",
   "author": "北漠海",
-  "authorUrl": "https://space.bilibili.com/1065768987",
+  "authorUrl": "https://github.com/beimohai",
   "isDesktopOnly": false
 }

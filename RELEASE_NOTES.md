@@ -1,8 +1,8 @@
-# Easy Bookkeeping 2.0.0
+# Easy Bookkeeping 2.0.2
 
 ## English
 
-Easy Bookkeeping 2.0.0 rebuilds the original Obsidian bookkeeping workflow as a complete local-first plugin.
+Easy Bookkeeping 2.0.2 rebuilds the original Obsidian bookkeeping workflow as a complete local-first plugin.
 
 ### Highlights
 
@@ -20,11 +20,13 @@ Easy Bookkeeping 2.0.0 rebuilds the original Obsidian bookkeeping workflow as a 
 
 ### Release assets
 
-Install `main.js`, `manifest.json`, and `styles.css`, or extract the bundled zip into `.obsidian/plugins/easy-bookkeeping/`.
+Install the three attached files directly: `main.js`, `manifest.json`, and `styles.css`.
+
+Cloud-drive mirror: [Quark Drive](https://pan.quark.cn/s/6e91aa90fec6).
 
 ## 中文
 
-Easy Bookkeeping 2.0.0 将原 Obsidian 记账流程完整重构为本地优先插件。
+Easy Bookkeeping 2.0.2 将原 Obsidian 记账流程完整重构为本地优先插件。
 
 ### 主要更新
 
@@ -42,4 +44,6 @@ Easy Bookkeeping 2.0.0 将原 Obsidian 记账流程完整重构为本地优先�
 
 ### Release 文件
 
-安装 `main.js`、`manifest.json`、`styles.css`，或把 zip 包解压到 `.obsidian/plugins/easy-bookkeeping/`。
+请直接下载并安装本 Release 附件中的三个文件：`main.js`、`manifest.json`、`styles.css`。
+
+网盘镜像：[夸克网盘](https://pan.quark.cn/s/6e91aa90fec6)。

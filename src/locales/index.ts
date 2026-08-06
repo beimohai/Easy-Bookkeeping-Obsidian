@@ -40,11 +40,6 @@ const EN: Record<string, string> = {
   "自动识别设备": "Detect device automatically",
   "收入颜色": "Income color",
   "支出颜色": "Expense color",
-  "检查更新": "Check for updates",
-  "立即检查": "Check now",
-  "自动检查更新": "Automatically check for updates",
-  "自动更新": "Automatic updates",
-  "发现新版本后自动下载，重启Obsidian后生效。": "Download new releases automatically; restart Obsidian to apply them.",
   "赞助与支持": "Support the project",
   "打开赞助面板": "Open support panel",
   "问题反馈": "Feedback",
@@ -158,7 +153,7 @@ const EN: Record<string, string> = {
   "版本号": "Version",
   "最近更新": "Last updated",
   "更新日期": "Updated",
-  "更新日期：2026-08-04": "Updated: 2026-08-04",
+  "更新日期：2026-08-06": "Updated: 2026-08-06",
   "本项目基于 MIT License 开源": "Open source under the MIT License",
   "拖动排序": "Drag to reorder",
   "切换表头显示": "Toggle column visibility",
@@ -306,7 +301,6 @@ const EN: Record<string, string> = {
   "GitHub没有返回有效的Release版本": "GitHub did not return a valid release version",
   "以后再说": "Later",
   "暂不更新": "Not now",
-  "立即更新": "Update now",
   "查看发布页": "View release page",
   "更多仪表盘操作": "More dashboard actions",
   "插件设置": "Plugin settings",
@@ -638,63 +632,63 @@ const LOCALE_TERMS: Partial<Record<Language, Record<string, string>>> = {
     "录入": "Saisie", "账目明细": "Transactions", "界面与格式": "Interface et formats", "数据与文件": "Données et fichiers", "快捷键": "Raccourcis",
     "记账仪表盘": "Tableau de bord", "开始记账": "Ajouter une transaction", "收入": "Revenus", "支出": "Dépenses", "结余": "Solde net", "余额": "Solde",
     "账户": "Compte", "类型": "Type", "必要性": "Nécessité", "分类": "Catégorie", "附件": "Pièce jointe", "日期": "Date", "内容": "Libellé", "金额": "Montant", "备注": "Notes", "标签": "Étiquettes", "操作": "Actions",
-    "筛选": "Filtrer", "清空筛选": "Effacer les filtres", "插件设置": "Paramètres", "保存": "Enregistrer", "取消": "Annuler", "确认": "Confirmer", "删除": "Supprimer", "添加": "Ajouter", "编辑": "Modifier", "刷新": "Actualiser", "导入CSV文件": "Importer un CSV", "导出CSV文件": "Exporter un CSV", "检查更新": "Rechercher des mises à jour", "自动更新": "Mise à jour automatique", "赞助与支持": "Soutenir le projet", "问题反馈": "Commentaires"
+    "筛选": "Filtrer", "清空筛选": "Effacer les filtres", "插件设置": "Paramètres", "保存": "Enregistrer", "取消": "Annuler", "确认": "Confirmer", "删除": "Supprimer", "添加": "Ajouter", "编辑": "Modifier", "刷新": "Actualiser", "导入CSV文件": "Importer un CSV", "导出CSV文件": "Exporter un CSV", "赞助与支持": "Soutenir le projet", "问题反馈": "Commentaires"
   },
   ru: {
     "通用": "Общие", "插件语言": "Язык плагина", "自动识别设备": "Автоопределение", "桌面版": "Компьютер", "手机版": "Мобильный",
     "录入": "Ввод", "账目明细": "Операции", "界面与格式": "Интерфейс и форматы", "数据与文件": "Данные и файлы", "快捷键": "Горячие клавиши",
     "记账仪表盘": "Финансовая панель", "开始记账": "Добавить операцию", "收入": "Доход", "支出": "Расход", "结余": "Итог", "余额": "Баланс",
     "账户": "Счёт", "类型": "Тип", "必要性": "Необходимость", "分类": "Категория", "附件": "Вложение", "日期": "Дата", "内容": "Описание", "金额": "Сумма", "备注": "Примечания", "标签": "Метки", "操作": "Действия",
-    "筛选": "Фильтр", "清空筛选": "Сбросить фильтры", "插件设置": "Настройки", "保存": "Сохранить", "取消": "Отмена", "确认": "Подтвердить", "删除": "Удалить", "添加": "Добавить", "编辑": "Изменить", "刷新": "Обновить", "导入CSV文件": "Импорт CSV", "导出CSV文件": "Экспорт CSV", "检查更新": "Проверить обновления", "自动更新": "Автообновление", "赞助与支持": "Поддержать проект", "问题反馈": "Обратная связь"
+    "筛选": "Фильтр", "清空筛选": "Сбросить фильтры", "插件设置": "Настройки", "保存": "Сохранить", "取消": "Отмена", "确认": "Подтвердить", "删除": "Удалить", "添加": "Добавить", "编辑": "Изменить", "刷新": "Обновить", "导入CSV文件": "Импорт CSV", "导出CSV文件": "Экспорт CSV", "赞助与支持": "Поддержать проект", "问题反馈": "Обратная связь"
   },
   es: {
     "通用": "General", "插件语言": "Idioma del complemento", "自动识别设备": "Detectar dispositivo", "桌面版": "Escritorio", "手机版": "Móvil",
     "录入": "Registro", "账目明细": "Movimientos", "界面与格式": "Interfaz y formatos", "数据与文件": "Datos y archivos", "快捷键": "Atajos",
     "记账仪表盘": "Panel financiero", "开始记账": "Añadir movimiento", "收入": "Ingresos", "支出": "Gastos", "结余": "Neto", "余额": "Saldo",
     "账户": "Cuenta", "类型": "Tipo", "必要性": "Necesidad", "分类": "Categoría", "附件": "Adjunto", "日期": "Fecha", "内容": "Descripción", "金额": "Importe", "备注": "Notas", "标签": "Etiquetas", "操作": "Acciones",
-    "筛选": "Filtrar", "清空筛选": "Borrar filtros", "插件设置": "Ajustes", "保存": "Guardar", "取消": "Cancelar", "确认": "Confirmar", "删除": "Eliminar", "添加": "Añadir", "编辑": "Editar", "刷新": "Actualizar", "导入CSV文件": "Importar CSV", "导出CSV文件": "Exportar CSV", "检查更新": "Buscar actualizaciones", "自动更新": "Actualización automática", "赞助与支持": "Apoyar el proyecto", "问题反馈": "Comentarios"
+    "筛选": "Filtrar", "清空筛选": "Borrar filtros", "插件设置": "Ajustes", "保存": "Guardar", "取消": "Cancelar", "确认": "Confirmar", "删除": "Eliminar", "添加": "Añadir", "编辑": "Editar", "刷新": "Actualizar", "导入CSV文件": "Importar CSV", "导出CSV文件": "Exportar CSV", "赞助与支持": "Apoyar el proyecto", "问题反馈": "Comentarios"
   },
   ar: {
     "通用": "عام", "插件语言": "لغة الإضافة", "自动识别设备": "اكتشاف الجهاز تلقائياً", "桌面版": "سطح المكتب", "手机版": "الهاتف",
     "录入": "الإدخال", "账目明细": "المعاملات", "界面与格式": "الواجهة والتنسيقات", "数据与文件": "البيانات والملفات", "快捷键": "الاختصارات",
     "记账仪表盘": "لوحة الحسابات", "开始记账": "إضافة معاملة", "收入": "الدخل", "支出": "المصروف", "结余": "الصافي", "余额": "الرصيد",
     "账户": "الحساب", "类型": "النوع", "必要性": "الضرورة", "分类": "الفئة", "附件": "المرفق", "日期": "التاريخ", "内容": "الوصف", "金额": "المبلغ", "备注": "ملاحظات", "标签": "الوسوم", "操作": "الإجراءات",
-    "筛选": "تصفية", "清空筛选": "مسح عوامل التصفية", "插件设置": "الإعدادات", "保存": "حفظ", "取消": "إلغاء", "确认": "تأكيد", "删除": "حذف", "添加": "إضافة", "编辑": "تعديل", "刷新": "تحديث", "导入CSV文件": "استيراد CSV", "导出CSV文件": "تصدير CSV", "检查更新": "التحقق من التحديثات", "自动更新": "تحديث تلقائي", "赞助与支持": "دعم المشروع", "问题反馈": "ملاحظات"
+    "筛选": "تصفية", "清空筛选": "مسح عوامل التصفية", "插件设置": "الإعدادات", "保存": "حفظ", "取消": "إلغاء", "确认": "تأكيد", "删除": "حذف", "添加": "إضافة", "编辑": "تعديل", "刷新": "تحديث", "导入CSV文件": "استيراد CSV", "导出CSV文件": "تصدير CSV", "赞助与支持": "دعم المشروع", "问题反馈": "ملاحظات"
   },
   ja: {
     "通用": "一般", "插件语言": "プラグインの言語", "自动识别设备": "端末を自動判定", "桌面版": "デスクトップ", "手机版": "モバイル",
     "录入": "入力", "账目明细": "取引明細", "界面与格式": "画面と書式", "数据与文件": "データとファイル", "快捷键": "ショートカット",
     "记账仪表盘": "家計簿ダッシュボード", "开始记账": "取引を追加", "收入": "収入", "支出": "支出", "结余": "収支", "余额": "残高",
     "账户": "口座", "类型": "種類", "必要性": "必要性", "分类": "カテゴリ", "附件": "添付", "日期": "日付", "内容": "内容", "金额": "金額", "备注": "メモ", "标签": "タグ", "操作": "操作",
-    "筛选": "フィルター", "清空筛选": "フィルターを解除", "插件设置": "プラグイン設定", "保存": "保存", "取消": "キャンセル", "确认": "確認", "删除": "削除", "添加": "追加", "编辑": "編集", "刷新": "更新", "导入CSV文件": "CSVをインポート", "导出CSV文件": "CSVをエクスポート", "检查更新": "更新を確認", "自动更新": "自動更新", "赞助与支持": "プロジェクトを支援", "问题反馈": "フィードバック"
+    "筛选": "フィルター", "清空筛选": "フィルターを解除", "插件设置": "プラグイン設定", "保存": "保存", "取消": "キャンセル", "确认": "確認", "删除": "削除", "添加": "追加", "编辑": "編集", "刷新": "更新", "导入CSV文件": "CSVをインポート", "导出CSV文件": "CSVをエクスポート", "赞助与支持": "プロジェクトを支援", "问题反馈": "フィードバック"
   },
   ko: {
     "通用": "일반", "插件语言": "플러그인 언어", "自动识别设备": "기기 자동 감지", "桌面版": "데스크톱", "手机版": "모바일",
     "录入": "입력", "账目明细": "거래 내역", "界面与格式": "화면 및 형식", "数据与文件": "데이터 및 파일", "快捷键": "단축키",
     "记账仪表盘": "가계부 대시보드", "开始记账": "거래 추가", "收入": "수입", "支出": "지출", "结余": "순액", "余额": "잔액",
     "账户": "계정", "类型": "유형", "必要性": "필요성", "分类": "분류", "附件": "첨부", "日期": "날짜", "内容": "내용", "金额": "금액", "备注": "메모", "标签": "태그", "操作": "작업",
-    "筛选": "필터", "清空筛选": "필터 지우기", "插件设置": "플러그인 설정", "保存": "저장", "取消": "취소", "确认": "확인", "删除": "삭제", "添加": "추가", "编辑": "편집", "刷新": "새로고침", "导入CSV文件": "CSV 가져오기", "导出CSV文件": "CSV 내보내기", "检查更新": "업데이트 확인", "自动更新": "자동 업데이트", "赞助与支持": "프로젝트 후원", "问题反馈": "피드백"
+    "筛选": "필터", "清空筛选": "필터 지우기", "插件设置": "플러그인 설정", "保存": "저장", "取消": "취소", "确认": "확인", "删除": "삭제", "添加": "추가", "编辑": "편집", "刷新": "새로고침", "导入CSV文件": "CSV 가져오기", "导出CSV文件": "CSV 내보내기", "赞助与支持": "프로젝트 후원", "问题反馈": "피드백"
   },
   de: {
     "通用": "Allgemein", "插件语言": "Plugin-Sprache", "自动识别设备": "Gerät automatisch erkennen", "桌面版": "Desktop", "手机版": "Mobil",
     "录入": "Erfassung", "账目明细": "Buchungen", "界面与格式": "Oberfläche und Formate", "数据与文件": "Daten und Dateien", "快捷键": "Tastenkürzel",
     "记账仪表盘": "Finanzübersicht", "开始记账": "Buchung hinzufügen", "收入": "Einnahmen", "支出": "Ausgaben", "结余": "Netto", "余额": "Saldo",
     "账户": "Konto", "类型": "Typ", "必要性": "Notwendigkeit", "分类": "Kategorie", "附件": "Anhang", "日期": "Datum", "内容": "Beschreibung", "金额": "Betrag", "备注": "Notizen", "标签": "Tags", "操作": "Aktionen",
-    "筛选": "Filtern", "清空筛选": "Filter löschen", "插件设置": "Plugin-Einstellungen", "保存": "Speichern", "取消": "Abbrechen", "确认": "Bestätigen", "删除": "Löschen", "添加": "Hinzufügen", "编辑": "Bearbeiten", "刷新": "Aktualisieren", "导入CSV文件": "CSV importieren", "导出CSV文件": "CSV exportieren", "检查更新": "Nach Updates suchen", "自动更新": "Automatische Updates", "赞助与支持": "Projekt unterstützen", "问题反馈": "Feedback"
+    "筛选": "Filtern", "清空筛选": "Filter löschen", "插件设置": "Plugin-Einstellungen", "保存": "Speichern", "取消": "Abbrechen", "确认": "Bestätigen", "删除": "Löschen", "添加": "Hinzufügen", "编辑": "Bearbeiten", "刷新": "Aktualisieren", "导入CSV文件": "CSV importieren", "导出CSV文件": "CSV exportieren", "赞助与支持": "Projekt unterstützen", "问题反馈": "Feedback"
   },
   pt: {
     "通用": "Geral", "插件语言": "Idioma do plugin", "自动识别设备": "Detetar dispositivo", "桌面版": "Computador", "手机版": "Telemóvel",
     "录入": "Registo", "账目明细": "Transações", "界面与格式": "Interface e formatos", "数据与文件": "Dados e ficheiros", "快捷键": "Atalhos",
     "记账仪表盘": "Painel financeiro", "开始记账": "Adicionar transação", "收入": "Receitas", "支出": "Despesas", "结余": "Líquido", "余额": "Saldo",
     "账户": "Conta", "类型": "Tipo", "必要性": "Necessidade", "分类": "Categoria", "附件": "Anexo", "日期": "Data", "内容": "Descrição", "金额": "Valor", "备注": "Notas", "标签": "Etiquetas", "操作": "Ações",
-    "筛选": "Filtrar", "清空筛选": "Limpar filtros", "插件设置": "Definições", "保存": "Guardar", "取消": "Cancelar", "确认": "Confirmar", "删除": "Eliminar", "添加": "Adicionar", "编辑": "Editar", "刷新": "Atualizar", "导入CSV文件": "Importar CSV", "导出CSV文件": "Exportar CSV", "检查更新": "Procurar atualizações", "自动更新": "Atualização automática", "赞助与支持": "Apoiar o projeto", "问题反馈": "Comentários"
+    "筛选": "Filtrar", "清空筛选": "Limpar filtros", "插件设置": "Definições", "保存": "Guardar", "取消": "Cancelar", "确认": "Confirmar", "删除": "Eliminar", "添加": "Adicionar", "编辑": "Editar", "刷新": "Atualizar", "导入CSV文件": "Importar CSV", "导出CSV文件": "Exportar CSV", "赞助与支持": "Apoiar o projeto", "问题反馈": "Comentários"
   },
   fa: {
     "通用": "عمومی", "插件语言": "زبان افزونه", "自动识别设备": "تشخیص خودکار دستگاه", "桌面版": "رومیزی", "手机版": "موبایل",
     "录入": "ثبت", "账目明细": "تراکنش‌ها", "界面与格式": "رابط و قالب‌ها", "数据与文件": "داده‌ها و فایل‌ها", "快捷键": "میانبرها",
     "记账仪表盘": "داشبورد مالی", "开始记账": "افزودن تراکنش", "收入": "درآمد", "支出": "هزینه", "结余": "خالص", "余额": "موجودی",
     "账户": "حساب", "类型": "نوع", "必要性": "ضرورت", "分类": "دسته", "附件": "پیوست", "日期": "تاریخ", "内容": "شرح", "金额": "مبلغ", "备注": "یادداشت", "标签": "برچسب‌ها", "操作": "عملیات",
-    "筛选": "فیلتر", "清空筛选": "پاک‌کردن فیلترها", "插件设置": "تنظیمات", "保存": "ذخیره", "取消": "لغو", "确认": "تأیید", "删除": "حذف", "添加": "افزودن", "编辑": "ویرایش", "刷新": "تازه‌سازی", "导入CSV文件": "درون‌ریزی CSV", "导出CSV文件": "برون‌ریزی CSV", "检查更新": "بررسی به‌روزرسانی", "自动更新": "به‌روزرسانی خودکار", "赞助与支持": "حمایت از پروژه", "问题反馈": "بازخورد"
+    "筛选": "فیلتر", "清空筛选": "پاک‌کردن فیلترها", "插件设置": "تنظیمات", "保存": "ذخیره", "取消": "لغو", "确认": "تأیید", "删除": "حذف", "添加": "افزودن", "编辑": "ویرایش", "刷新": "تازه‌سازی", "导入CSV文件": "درون‌ریزی CSV", "导出CSV文件": "برون‌ریزی CSV", "赞助与支持": "حمایت از پروژه", "问题反馈": "بازخورد"
   }
 };
 
@@ -809,9 +803,7 @@ function translateEnglish(source: string): string {
     [/^移除(.+)$/u, (_, label) => `Remove ${translateEnglish(label)}`],
     [/^格式不合法：(.+)$/u, (_, reason) => `Invalid format: ${translateEnglish(reason)}`],
     [/^请输入1—(\d+)之间的日期$/u, (_, maximum) => `Enter a day from 1 to ${maximum}`],
-    [/^检查更新失败：(.+)$/u, (_, reason) => `Update check failed: ${translateEnglish(reason)}`],
     [/^发布包缺少(.+)$/u, (_, files) => `Release assets are missing ${files}`],
-    [/^已自动更新到(.+)，重启Obsidian后生效$/u, (_, version) => `Updated automatically to ${version}. Restart Obsidian to apply it`],
     [/^已转换(\d+)个仓库内旧版账目$/u, (_, count) => `Converted ${count} legacy transactions in the vault`],
     [/^已从外部导入(\d+)笔，跳过或失败(\d+)个文件$/u, (_, imported, failed) => `Imported ${imported} transactions externally; skipped or failed ${failed} files`],
     [/^正在处理 (\d+)\/(\d+)（(\d+)%）$/u, (_, current, total, percent) => `Processing ${current}/${total} (${percent}%)`],

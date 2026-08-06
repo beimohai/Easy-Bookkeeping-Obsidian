@@ -141,9 +141,6 @@ export interface BookkeepingSettings {
   collapsedHeaderActions: HeaderAction[];
   headerActionOrder: HeaderAction[];
   calendarWeekStart: CalendarWeekStart;
-  autoCheckUpdates: boolean;
-  autoUpdate: boolean;
-  lastUpdateCheck: string;
   showFloatingBackToTop: boolean;
   language: Language;
   filterPersistence: FilterPersistenceMode;
@@ -285,9 +282,6 @@ export const DEFAULT_SETTINGS: BookkeepingSettings = {
   collapsedHeaderActions: [],
   headerActionOrder: ["export", "import", "period", "refresh", "tags", "settings"],
   calendarWeekStart: "sunday",
-  autoCheckUpdates: true,
-  autoUpdate: true,
-  lastUpdateCheck: "",
   showFloatingBackToTop: true,
   language: "zh-CN",
   filterPersistence: "monthly",

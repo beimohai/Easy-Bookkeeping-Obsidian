@@ -571,7 +571,7 @@ export class DashboardView extends ItemView {
     const axis = parent.createDiv({ cls: "bookkeeping-trend-axis bookkeeping-trend-dates" });
     [1, 8, 15, 22, 29].filter((day) => day <= values.length).forEach((day) => {
       const label = axis.createSpan({ text: `${this.month.slice(5)}-${String(day).padStart(2, "0")}` });
-      label.style.left = `${x(day - 1) / width * 100}%`;
+      label.setCssStyles({ left: `${x(day - 1) / width * 100}%` });
     });
     parent.createDiv({ cls: "bookkeeping-trend-range", text: `${this.trendMetricLabel(metric)}范围：${this.money(min)}～${this.money(max)}`, attr: { title: `${min}～${max}` } });
   }
@@ -686,7 +686,7 @@ export class DashboardView extends ItemView {
       cursor += value / total * 100;
       return `${this.pieColor(metric, name, index)} ${start.toFixed(2)}% ${cursor.toFixed(2)}%`;
     });
-    donut.style.background = `conic-gradient(${slices.join(",")})`;
+    donut.setCssStyles({ background: `conic-gradient(${slices.join(",")})` });
     const center = donut.createDiv({ cls: "bookkeeping-donut-center" });
     center.createSpan({ text: "合计" });
     center.createEl("strong", { text: this.money(total), attr: { title: String(total) } });
@@ -697,7 +697,7 @@ export class DashboardView extends ItemView {
       const row = legend.createDiv({ cls: "bookkeeping-legend-row", attr: { title: fullText } });
       const label = row.createDiv({ cls: "bookkeeping-legend-label" });
       const dot = label.createSpan({ cls: "bookkeeping-legend-dot" });
-      dot.style.backgroundColor = this.pieColor(metric, name, index);
+      dot.setCssStyles({ backgroundColor: this.pieColor(metric, name, index) });
       label.createSpan({ text: `${name}：${this.money(value)}` });
       row.createSpan({ text: `${percent.toFixed(1)}%`, cls: "bookkeeping-legend-percent" });
     });
@@ -757,7 +757,7 @@ export class DashboardView extends ItemView {
       const tone = metric === "income" || (metric === "net" && value >= 0) ? " is-positive" : metric === "expense" || (metric === "net" && value < 0) ? " is-negative" : "";
       const fill = track.createDiv({ cls: `bookkeeping-progress-fill${tone}` });
       fill.toggleClass("is-zero", Math.abs(value) < 0.005);
-      fill.style.width = `${Math.abs(value) / max * 100}%`;
+      fill.setCssStyles({ width: `${Math.abs(value) / max * 100}%` });
       row.addEventListener("click", () => {
         this.toggleTagFilter(tag);
         this.showAdvancedFilters = true;
@@ -783,7 +783,7 @@ export class DashboardView extends ItemView {
       label.createSpan({ text: `${this.money(spent)}/${this.money(budget)}` });
       const track = row.createDiv({ cls: "bookkeeping-progress" });
       const fill = track.createDiv({ cls: `bookkeeping-progress-fill${percent > 100 ? " is-over" : ""}` });
-      fill.style.width = `${Math.min(percent, 100)}%`;
+      fill.setCssStyles({ width: `${Math.min(percent, 100)}%` });
       row.createDiv({ cls: `bookkeeping-budget-hint${percent > 100 ? " is-over" : ""}`, text: percent > 100 ? `超支${this.money(spent - budget)}` : `已用${percent.toFixed(0)}%` });
     }
   }
@@ -1302,9 +1302,7 @@ export class DashboardView extends ItemView {
     const table = wrapper.createEl("table", { cls: "bookkeeping-table" });
     const colgroup = table.createEl("colgroup");
     const selectCol = colgroup.createEl("col", { cls: "bookkeeping-select-column-col" });
-    selectCol.style.width = "40px";
-    selectCol.style.minWidth = "40px";
-    selectCol.style.maxWidth = "40px";
+    selectCol.setCssStyles({ width: "40px", minWidth: "40px", maxWidth: "40px" });
     for (const column of columns) {
       const col = colgroup.createEl("col");
       col.dataset.column = column;
@@ -1312,10 +1310,7 @@ export class DashboardView extends ItemView {
     }
     if (columns.every((column) => Number.isFinite(this.plugin.settings.tableColumnWidths[column]))) {
       const fixedWidth = 40 + columns.reduce((sum, column) => sum + (this.plugin.settings.tableColumnWidths[column] ?? this.columnMinimumWidth(column)), 0);
-      table.style.width = `${fixedWidth}px`;
-      table.style.minWidth = `${fixedWidth}px`;
-      table.style.maxWidth = `${fixedWidth}px`;
-      table.style.tableLayout = "fixed";
+      table.setCssStyles({ width: `${fixedWidth}px`, minWidth: `${fixedWidth}px`, maxWidth: `${fixedWidth}px`, tableLayout: "fixed" });
     }
     const head = table.createEl("thead").createEl("tr");
     const selectAllCell = head.createEl("th", { cls: "bookkeeping-select-column" });
@@ -1359,8 +1354,7 @@ export class DashboardView extends ItemView {
         const thumbWidth = maximum > 0 ? Math.min(innerWidth, Math.max(30, innerWidth * visibleRatio)) : innerWidth;
         const travel = Math.max(0, innerWidth - thumbWidth);
         const offset = maximum > 0 ? value / maximum * travel : 0;
-        thumb.style.width = `${thumbWidth}px`;
-        thumb.style.transform = `translate3d(${offset}px, 0, 0)`;
+        thumb.setCssStyles({ width: `${thumbWidth}px`, transform: `translate3d(${offset}px, 0, 0)` });
         track.toggleClass("is-static", maximum <= 0);
         track.setAttribute("aria-disabled", String(maximum <= 0));
         track.setAttribute("aria-valuemax", String(Math.round(maximum)));
@@ -1420,9 +1414,9 @@ export class DashboardView extends ItemView {
     wrapper.addEventListener("scroll", syncScrollbarPositions);
     const syncScrollbars = (): void => {
       maximum = Math.max(0, table.scrollWidth - wrapper.clientWidth);
-      wrapper.style.setProperty("--bookkeeping-table-viewport-width", `${wrapper.clientWidth}px`);
+      wrapper.setCssProps({ "--bookkeeping-table-viewport-width": `${wrapper.clientWidth}px` });
       syncScrollbarPositions();
-      wrapper.style.setProperty("--bookkeeping-table-header-height", `${head.getBoundingClientRect().height}px`);
+      wrapper.setCssProps({ "--bookkeeping-table-header-height": `${head.getBoundingClientRect().height}px` });
     };
     this.tableResizeObserver = new ResizeObserver(syncScrollbars);
     this.tableResizeObserver.observe(wrapper);
@@ -1574,9 +1568,8 @@ export class DashboardView extends ItemView {
     const migrated = column === "date" && [96, 82].includes(Math.round(stored)) ? 70 : Math.round(stored);
     const width = Math.max(this.columnMinimumWidth(column), Math.min(480, migrated));
     if (width !== stored) this.plugin.settings.tableColumnWidths[column] = width;
-    cell.style.width = `${width}px`;
-    cell.style.minWidth = `${width}px`;
-    cell.style.maxWidth = `${width}px`;
+
+    cell.setCssStyles({ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` });
   }
 
   private columnMinimumWidth(column: TableColumn): number {
@@ -1615,16 +1608,11 @@ export class DashboardView extends ItemView {
           frozenTableWidth += frozenWidth;
           this.plugin.settings.tableColumnWidths[frozenColumn] = frozenWidth;
           table.querySelectorAll<HTMLElement>(`[data-column="${frozenColumn}"]`).forEach((element) => {
-            element.style.width = `${frozenWidth}px`;
-            element.style.minWidth = `${frozenWidth}px`;
-            element.style.maxWidth = `${frozenWidth}px`;
+            element.setCssStyles({ width: `${frozenWidth}px`, minWidth: `${frozenWidth}px`, maxWidth: `${frozenWidth}px` });
           });
         });
         startTableWidth = Math.round(frozenTableWidth);
-        table.style.width = `${startTableWidth}px`;
-        table.style.minWidth = `${startTableWidth}px`;
-        table.style.maxWidth = `${startTableWidth}px`;
-        table.style.tableLayout = "fixed";
+        table.setCssStyles({ width: `${startTableWidth}px`, minWidth: `${startTableWidth}px`, maxWidth: `${startTableWidth}px`, tableLayout: "fixed" });
       }
       handle.setPointerCapture(event.pointerId);
       document.body.addClass("bookkeeping-is-resizing-column");
@@ -1632,16 +1620,14 @@ export class DashboardView extends ItemView {
         const minimum = this.columnMinimumWidth(column);
         const width = Math.max(minimum, Math.min(480, Math.round(startWidth + moveEvent.clientX - startX)));
         this.contentEl.querySelectorAll<HTMLElement>(`[data-column="${column}"]`).forEach((element) => {
-          element.style.width = `${width}px`;
-          element.style.minWidth = `${width}px`;
-          element.style.maxWidth = `${width}px`;
+
+          element.setCssStyles({ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` });
         });
         this.plugin.settings.tableColumnWidths[column] = width;
         if (table) {
           const nextTableWidth = Math.round(startTableWidth + width - startWidth);
-          table.style.width = `${nextTableWidth}px`;
-          table.style.minWidth = `${nextTableWidth}px`;
-          table.style.maxWidth = `${nextTableWidth}px`;
+
+          table.setCssStyles({ width: `${nextTableWidth}px`, minWidth: `${nextTableWidth}px`, maxWidth: `${nextTableWidth}px` });
         }
       };
       const end = (): void => {

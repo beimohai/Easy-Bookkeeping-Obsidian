@@ -24,9 +24,9 @@ export function bindPointerSort({ root, item, handle, itemSelector, onCommit }: 
         document.body.addClass("bookkeeping-is-pointer-sorting");
       }
       moveEvent.preventDefault();
-      item.style.pointerEvents = "none";
+      item.setCssStyles({ pointerEvents: "none" });
       const below = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
-      item.style.pointerEvents = "";
+      item.setCssStyles({ pointerEvents: "" });
       const candidate = below instanceof Element ? below.closest<HTMLElement>(itemSelector) : null;
       root.querySelectorAll(".is-drop-target").forEach((element) => element.removeClass("is-drop-target"));
       if (!candidate || candidate === item || !root.contains(candidate)) return;

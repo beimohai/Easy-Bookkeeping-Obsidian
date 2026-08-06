@@ -1,0 +1,9 @@
+# 减小 GitHub 自动生成的 Source code 压缩包体积；不影响仓库源码和 Release 附件。
+.DS_Store export-ignore
+src/**/.DS_Store export-ignore
+.github export-ignore
+.codex export-ignore
+.agents export-ignore
+*.log export-ignore
+*.map export-ignore
+支持.png export-ignore

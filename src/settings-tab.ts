@@ -28,7 +28,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     containerEl.empty();
     containerEl.addClass("bookkeeping-settings");
     containerEl.toggleClass("is-mobile", Platform.isMobile);
-    containerEl.createEl("h2", { text: "Easy Bookkeeping" });
+    new Setting(containerEl).setName("Easy Bookkeeping").setHeading();
 
     this.section("通用");
     const availableLanguages = Object.fromEntries(Object.entries(LANGUAGE_OPTIONS).filter(([language]) => !this.plugin.settings.disabledLanguages.includes(language as Language)));
@@ -66,15 +66,6 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("支出颜色").addColorPicker((picker) => picker.setValue(this.plugin.settings.expenseColor).onChange(async (value) => {
       this.plugin.settings.expenseColor = value;
       await this.plugin.saveSettings();
-    }));
-    new Setting(containerEl).setName("检查更新").addButton((button) => button.setButtonText("立即检查").setIcon("refresh-cw").onClick(() => void this.plugin.checkForUpdates(true)));
-    new Setting(containerEl).setName("自动检查更新").addToggle((toggle) => toggle.setValue(this.plugin.settings.autoCheckUpdates).onChange(async (value) => {
-      this.plugin.settings.autoCheckUpdates = value;
-      await this.plugin.saveSettingsQuietly();
-    }));
-    new Setting(containerEl).setName("自动更新").setDesc("发现新版本后自动下载，重启Obsidian后生效。").addToggle((toggle) => toggle.setValue(this.plugin.settings.autoUpdate).onChange(async (value) => {
-      this.plugin.settings.autoUpdate = value;
-      await this.plugin.saveSettingsQuietly();
     }));
     this.renderCommunityEntries(containerEl);
 
@@ -246,12 +237,11 @@ export class BookkeepingSettingTab extends PluginSettingTab {
   }
 
   private section(title: string): void {
-    const header = this.containerEl.createDiv({ cls: "bookkeeping-settings-section-header" });
-    header.createEl("h2", { text: title });
+    new Setting(this.containerEl).setName(title).setHeading().settingEl.addClass("bookkeeping-settings-section-header");
   }
 
   private heading(title: string): void {
-    this.containerEl.createEl("h3", { text: title });
+    new Setting(this.containerEl).setName(title).setHeading();
   }
 
   private renderCommunityEntries(parent: HTMLElement, footer = false): void {
@@ -276,7 +266,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     details.createEl("a", { text: "Easy Bookkeeping", attr: { href: PROJECT_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: "作者：北漠海", attr: { href: BILIBILI_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: `版本号：${this.plugin.manifest.version}`, attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
-    details.createEl("a", { text: "更新日期：2026-08-04", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
+    details.createEl("a", { text: "更新日期：2026-08-06", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
     footer.createDiv({ text: "本项目基于 MIT License 开源", cls: "bookkeeping-plugin-footer-license" });
   }
 
