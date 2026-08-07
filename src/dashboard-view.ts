@@ -418,27 +418,27 @@ export class DashboardView extends ItemView {
     menu.addItem((item) => item.setTitle(this.plugin.t("配置图表")).setIcon("settings-2").onClick(() => {
       new ChartSettingsModal(this.app, this.plugin, chart, async () => this.render()).open();
     }));
-    menu.addItem((item) => item.setTitle(this.plugin.t("复制图表")).setIcon("copy").onClick(async () => {
+    menu.addItem((item) => item.setTitle(this.plugin.t("复制图表")).setIcon("copy").onClick(() => { void (async () => {
       const index = this.plugin.settings.chartConfigs.findIndex((item) => item.id === chart.id);
       const copy: DashboardChartConfig = { ...chart, id: `chart-${Date.now()}`, title: `${chart.title}副本` };
       this.plugin.settings.chartConfigs.splice(index + 1, 0, copy);
       await this.plugin.saveSettings();
-    }));
-    menu.addItem((item) => item.setTitle(this.plugin.t(chart.width === "full" ? "改为半宽" : "改为通栏")).setIcon("columns-2").onClick(async () => {
+    })(); }));
+    menu.addItem((item) => item.setTitle(this.plugin.t(chart.width === "full" ? "改为半宽" : "改为通栏")).setIcon("columns-2").onClick(() => { void (async () => {
       chart.width = chart.width === "full" ? "half" : "full";
       await this.plugin.saveSettings();
-    }));
+    })(); }));
     menu.addSeparator();
-    menu.addItem((item) => item.setTitle(this.plugin.t("隐藏图表")).setIcon("eye-off").onClick(async () => {
+    menu.addItem((item) => item.setTitle(this.plugin.t("隐藏图表")).setIcon("eye-off").onClick(() => { void (async () => {
       chart.visible = false;
       await this.plugin.saveSettings();
       this.plugin.notice(`已隐藏“${chart.title}”`);
-    }));
-    menu.addItem((item) => item.setTitle(this.plugin.t("删除图表")).setIcon("trash-2").onClick(async () => {
+    })(); }));
+    menu.addItem((item) => item.setTitle(this.plugin.t("删除图表")).setIcon("trash-2").onClick(() => { void (async () => {
       this.plugin.settings.chartConfigs = this.plugin.settings.chartConfigs.filter((item) => item.id !== chart.id);
       await this.plugin.saveSettings();
       this.plugin.notice(`已删除图表“${chart.title}”`);
-    }));
+    })(); }));
     menu.showAtMouseEvent(event);
   }
 
@@ -851,8 +851,8 @@ export class DashboardView extends ItemView {
       const categoryOptions = [...new Set(this.applyFilters(monthItems, "categories").filter((item) => item.type !== "转账").map((item) => item.category || "未分类"))];
       const accountOptions = [...new Set(this.applyFilters(monthItems, "accounts").flatMap((item) => [item.account, item.targetAccount]).filter(Boolean))];
       const tagOptions = this.collectTags(this.applyFilters(monthItems, "tags"));
-      this.renderMultiFilter(basicGrid, "types", "类型", typeOptions, this.filters.types, (values) => this.filters.types = values as TransactionType[], (value) => this.plugin.settings.typeLabels[value as TransactionType] ?? value);
-      this.renderMultiFilter(basicGrid, "necessities", "必要性", necessityOptions, this.filters.necessities, (values) => this.filters.necessities = values as Array<"必需" | "非必需">, (value) => this.plugin.settings.necessityLabels[value as "必需" | "非必需"] ?? value);
+      this.renderMultiFilter(basicGrid, "types", "类型", typeOptions, this.filters.types, (values) => this.filters.types = values, (value) => this.plugin.settings.typeLabels[value] ?? value);
+      this.renderMultiFilter(basicGrid, "necessities", "必要性", necessityOptions, this.filters.necessities, (values) => this.filters.necessities = values, (value) => this.plugin.settings.necessityLabels[value] ?? value);
       if (this.isTableColumnVisible("category")) this.renderMultiFilter(basicGrid, "categories", "分类", categoryOptions, this.filters.categories, (values) => this.filters.categories = values);
       if (this.isTableColumnVisible("account")) this.renderMultiFilter(basicGrid, "accounts", "账户", accountOptions, this.filters.accounts, (values) => this.filters.accounts = values);
       this.renderMultiFilter(basicGrid, "tags", "标签", tagOptions.length ? tagOptions : tags, this.selectedFilterTags(), (values) => this.filters.tags = values.join(" "));
@@ -1264,7 +1264,7 @@ export class DashboardView extends ItemView {
       finished = true;
       void Promise.all(pending.map((item) => this.plugin.store.finalizeRemove(item)));
     }, seconds * 1000);
-    undo.addEventListener("click", async () => {
+    undo.addEventListener("click", () => { void (async () => {
       if (finished) return;
       finished = true;
       window.clearTimeout(timer);
@@ -1272,7 +1272,7 @@ export class DashboardView extends ItemView {
       notice.hide();
       await this.render();
       this.plugin.notice(`已恢复${items.length}笔账目`);
-    });
+    })(); });
   }
 
   private renderTable(content: HTMLElement, items: Transaction[]): void {
@@ -1483,11 +1483,11 @@ export class DashboardView extends ItemView {
       else cell.createSpan({ text: item.title, attr: { title: item.title }, cls: "bookkeeping-cell-ellipsis bookkeeping-user-text" });
     } else if (column === "type") {
       const typeOptions = this.plugin.settings.typeOrder.filter((type) => this.plugin.settings.enableAccount && this.plugin.settings.accounts.length > 1 || type !== "转账");
-      if (this.canInlineEdit("type")) this.renderInlineChoice(cell, item, "type", typeOptions, item.type, `bookkeeping-type bookkeeping-type-${item.type}`, (value) => this.plugin.settings.typeLabels[value as TransactionType] ?? value);
+      if (this.canInlineEdit("type")) this.renderInlineChoice(cell, item, "type", typeOptions, item.type, `bookkeeping-type bookkeeping-type-${item.type}`, (value) => this.plugin.settings.typeLabels[value] ?? value);
       else cell.createSpan({ text: this.plugin.settings.typeLabels[item.type], cls: `bookkeeping-type bookkeeping-type-${item.type}` });
     } else if (column === "necessity") {
       const value = item.type === "转账" ? "—" : item.necessity;
-      if (this.canInlineEdit("necessity") && item.type !== "转账") this.renderInlineChoice(cell, item, "necessity", this.plugin.settings.necessityOrder, value, `bookkeeping-necessity bookkeeping-necessity-${item.necessity}`, (option) => option === "—" ? option : this.plugin.settings.necessityLabels[option as "必需" | "非必需"] ?? option);
+      if (this.canInlineEdit("necessity") && item.type !== "转账") this.renderInlineChoice(cell, item, "necessity", this.plugin.settings.necessityOrder, value, `bookkeeping-necessity bookkeeping-necessity-${item.necessity}`, (option) => option === "—" ? option : this.plugin.settings.necessityLabels[option] ?? option);
       else cell.createSpan({ text: value === "—" ? value : this.plugin.settings.necessityLabels[item.necessity], cls: `bookkeeping-necessity bookkeeping-necessity-${item.necessity}` });
     } else if (column === "category") {
       const value = item.type === "转账" ? "—" : (item.category || "未分类");
@@ -1526,13 +1526,13 @@ export class DashboardView extends ItemView {
         badge.addEventListener("contextmenu", (event) => {
           event.preventDefault();
           const menu = new Menu();
-          menu.addItem((menuItem) => menuItem.setTitle(this.plugin.t("从此账目删除标签")).setIcon("tag-x").onClick(async () => {
+          menu.addItem((menuItem) => menuItem.setTitle(this.plugin.t("从此账目删除标签")).setIcon("tag-x").onClick(() => { void (async () => {
             const draft = this.toDraft(item);
             draft.tags = draft.tags.filter((value) => value !== tag);
             draft.note = this.replaceNoteTag(draft.note, tag, null);
             await this.plugin.store.update(item, draft);
             await this.render();
-          }));
+          })(); }));
           menu.addItem((menuItem) => menuItem.setTitle(this.plugin.t("全局重命名此标签")).setIcon("pencil").onClick(() => this.plugin.openTagManager(tag)));
           menu.showAtMouseEvent(event);
         });
@@ -1670,7 +1670,7 @@ export class DashboardView extends ItemView {
         finished = true;
         void this.plugin.store.finalizeRemove(pending);
       }, seconds * 1000);
-      undo.addEventListener("click", async () => {
+      undo.addEventListener("click", () => { void (async () => {
         if (finished) return;
         finished = true;
         window.clearTimeout(timer);
@@ -1678,7 +1678,7 @@ export class DashboardView extends ItemView {
         notice.hide();
         this.plugin.notice("已撤销删除");
         await this.render();
-      });
+      })(); });
     } catch (error) {
       this.plugin.notice(errorMessageZh(error, "删除失败，请重新扫描后再试"));
     } finally {
@@ -1782,7 +1782,7 @@ export class DashboardView extends ItemView {
   private async updateInlineChoice(item: Transaction, field: "type" | "necessity" | "category" | "account", value: string): Promise<void> {
     const draft = this.toDraft(item);
     if (field === "type") {
-      draft.type = value as TransactionType;
+      draft.type = value;
       if (draft.type === "转账") {
         draft.targetAccount = this.plugin.settings.accounts.map((account) => account.name).find((account) => account !== draft.account) ?? "";
       } else {
@@ -2031,18 +2031,18 @@ class DashboardChartsModal extends Modal {
       row.createSpan({ cls: "bookkeeping-chart-manager-name", text: chart.title });
       const visible = row.createEl("button", { cls: "clickable-icon", attr: { type: "button", "aria-label": chart.visible ? `隐藏${chart.title}` : `显示${chart.title}` } });
       setIcon(visible, chart.visible ? "eye" : "eye-off");
-      visible.addEventListener("click", async () => { chart.visible = !chart.visible; await this.plugin.saveSettingsQuietly(); this.renderList(); });
+      visible.addEventListener("click", () => { void (async () => { chart.visible = !chart.visible; await this.plugin.saveSettingsQuietly(); this.renderList(); })(); });
       const edit = row.createEl("button", { cls: "clickable-icon", attr: { "aria-label": `配置${chart.title}` } });
       setIcon(edit, "settings-2");
       edit.addEventListener("click", () => new ChartSettingsModal(this.app, this.plugin, chart, async () => { await this.onSaved(); this.renderList(); }).open());
       const remove = row.createEl("button", { cls: "clickable-icon mod-warning", attr: { "aria-label": `移除${chart.title}` } });
       setIcon(remove, "trash-2");
-      remove.addEventListener("click", async () => {
+      remove.addEventListener("click", () => { void (async () => {
         this.plugin.settings.chartConfigs = this.plugin.settings.chartConfigs.filter((item) => item.id !== chart.id);
         await this.plugin.saveSettings();
         await this.onSaved();
         this.renderList();
-      });
+      })(); });
       drag.addEventListener("dragstart", () => { this.draggedId = chart.id; row.addClass("is-dragging"); });
       drag.addEventListener("dragend", () => { this.draggedId = ""; row.removeClass("is-dragging"); this.contentEl.querySelectorAll(".is-drop-target").forEach((element) => element.classList.remove("is-drop-target")); });
       row.addEventListener("dragover", (event) => event.preventDefault());
@@ -2061,12 +2061,12 @@ class DashboardChartsModal extends Modal {
       });
     }
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
-    new ButtonComponent(actions).setButtonText("添加图表").setIcon("plus").onClick(async () => {
+    new ButtonComponent(actions).setButtonText("添加图表").setIcon("plus").onClick(() => { void (async () => {
       this.plugin.settings.chartConfigs.push({ id: `chart-${Date.now()}`, title: "自定义趋势图", kind: "trend", visible: true, width: "half", metric: "expense", chartType: "line" });
       await this.plugin.saveSettings();
       await this.onSaved();
       this.renderList();
-    });
+    })(); });
     new ButtonComponent(actions).setButtonText("完成").setCta().onClick(() => this.close());
   }
 
@@ -2201,7 +2201,7 @@ class BudgetEditorModal extends Modal {
     const error = this.contentEl.createDiv({ cls: "bookkeeping-form-error" });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("保存预算").setCta().onClick(async () => {
+    new ButtonComponent(actions).setButtonText("保存预算").setCta().onClick(() => { void (async () => {
       const budgets: Record<string, number> = {};
       for (const line of this.value.split("\n")) {
         if (!line.trim()) continue;
@@ -2218,7 +2218,7 @@ class BudgetEditorModal extends Modal {
       await this.plugin.saveSettings();
       await this.onSaved();
       this.close();
-    });
+    })(); });
   }
 }
 
@@ -2298,7 +2298,7 @@ class ChartSettingsModal extends Modal {
     }
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("保存").setCta().onClick(async () => {
+    new ButtonComponent(actions).setButtonText("保存").setCta().onClick(() => { void (async () => {
       if (!this.draft.title) this.draft.title = "自定义图表";
       if (this.draft.kind !== "trend") {
         delete this.draft.chartType;
@@ -2308,7 +2308,7 @@ class ChartSettingsModal extends Modal {
       await this.plugin.saveSettings();
       await this.onSaved();
       this.close();
-    });
+    })(); });
   }
 
   private syncTitle(): void {
@@ -2348,7 +2348,8 @@ class OpeningBalanceModal extends Modal {
   onOpen(): void {
     this.modalEl.addClass("bookkeeping-modal");
     const opening = this.plugin.store.accountMonthlyBalances(this.transactions, this.month).opening;
-    this.values = Object.fromEntries(opening);
+    this.values = {};
+    for (const [name, value] of opening) this.values[name] = value;
     this.accounts = this.plugin.settings.accounts.map((account) => ({ ...account }));
     this.renderContent();
   }
@@ -2404,15 +2405,15 @@ class OpeningBalanceModal extends Modal {
     this.errorEl = this.contentEl.createDiv({ cls: "bookkeeping-form-error" });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions bookkeeping-balance-actions" });
     if (this.plugin.settings.monthlyOpeningBalances[this.month]) {
-      new ButtonComponent(actions).setButtonText("清除本月校准").setDestructive().onClick(async () => {
+      new ButtonComponent(actions).setButtonText("清除本月校准").setDestructive().onClick(() => { void (async () => {
         delete this.plugin.settings.monthlyOpeningBalances[this.month];
         await this.plugin.saveSettings();
         await this.onSaved();
         this.close();
-      });
+      })(); });
     }
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("保存账户与余额").setCta().onClick(async () => {
+    new ButtonComponent(actions).setButtonText("保存账户与余额").setCta().onClick(() => { void (async () => {
       if (this.accounts.some((account) => !Number.isFinite(this.values[account.name] ?? 0))) {
         this.errorEl.setText("余额必须是最多保留2位小数的数字，可以为负数");
         return;
@@ -2423,12 +2424,14 @@ class OpeningBalanceModal extends Modal {
       }
       this.plugin.settings.accounts = this.accounts.map((account) => ({ ...account }));
       if (!this.accounts.some((account) => account.name === this.plugin.settings.defaultAccount)) this.plugin.settings.defaultAccount = this.accounts[0]?.name ?? "默认账户";
-      this.plugin.settings.monthlyOpeningBalances[this.month] = Object.fromEntries(this.accounts.map((account) => [account.name, roundMoney(this.values[account.name] ?? 0)]));
+      const openingBalances: Record<string, number> = {};
+      for (const account of this.accounts) openingBalances[account.name] = roundMoney(this.values[account.name] ?? 0);
+      this.plugin.settings.monthlyOpeningBalances[this.month] = openingBalances;
       await this.plugin.saveSettings();
       await this.onSaved();
       this.plugin.notice("账户顺序、编号和月初余额已保存");
       this.close();
-    });
+    })(); });
   }
 
   private validCode(code: string): boolean {
@@ -2463,19 +2466,24 @@ class BulkEditModal extends Modal {
     });
     const typeOptions: Record<string, string> = { "": "不修改" };
     this.settings.typeOrder.filter((type) => type !== "转账" || this.settings.enableAccount && this.settings.accounts.length > 1).forEach((type) => typeOptions[type] = this.settings.typeLabels[type] ?? type);
-    new Setting(this.contentEl).setName("类型").addDropdown((dropdown) => dropdown.addOptions(typeOptions).onChange((value) => this.changes.type = value ? value as TransactionType : undefined));
+    new Setting(this.contentEl).setName("类型").addDropdown((dropdown) => dropdown.addOptions(typeOptions).onChange((value) => this.changes.type = value || undefined));
+    const necessityOptions: Record<string, string> = { "": "不修改" };
+    for (const value of this.settings.necessityOrder) necessityOptions[value] = this.settings.necessityLabels[value] ?? value;
     new Setting(this.contentEl).setName("必要性").addDropdown((dropdown) => dropdown
-      .addOptions({ "": "不修改", ...Object.fromEntries(this.settings.necessityOrder.map((value) => [value, this.settings.necessityLabels[value] ?? value])) })
+      .addOptions(necessityOptions)
       .onChange((value) => this.changes.necessity = value || undefined));
     if (this.settings.enableAccount) {
-      const accounts = Object.fromEntries([["", "不修改"], ...this.settings.accounts.map((account) => [account.name, account.name])]);
+      const accounts: Record<string, string> = { "": "不修改" };
+      for (const account of this.settings.accounts) accounts[account.name] = account.name;
       new Setting(this.contentEl).setName("账户").addDropdown((dropdown) => dropdown.addOptions(accounts).onChange((value) => this.changes.account = value || undefined));
       new Setting(this.contentEl).setName("转入账户").setDesc("仅批量改为转账时使用").addDropdown((dropdown) => dropdown.addOptions(accounts).onChange((value) => this.changes.targetAccount = value || undefined));
     }
     if (this.settings.enableCategory) {
       const categories = [...new Set(["未分类", ...this.settings.categories, ...this.settings.incomeCategories])];
+      const categoryOptions: Record<string, string> = { "": "不修改" };
+      for (const category of categories) categoryOptions[category] = category;
       new Setting(this.contentEl).setName("分类").addDropdown((dropdown) => dropdown
-        .addOptions(Object.fromEntries([["", "不修改"], ...categories.map((category) => [category, category])]))
+        .addOptions(categoryOptions)
         .onChange((value) => this.changes.category = value || undefined));
     }
     new Setting(this.contentEl).setName("标签操作").addDropdown((dropdown) => dropdown

@@ -1,5 +1,15 @@
 # 更新日志 Changelog
 
+* [V2.0.4](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.4) 2026-08-07
+  * 审核修复
+    * 将最低 Obsidian 版本声明更新为 1.13.0，匹配当前使用的 Obsidian 1.13 API。
+    * 保持原设置页和既有功能行为不变，仅处理必要发布元数据。
+  * Review fix
+    * Updated the declared minimum Obsidian version to 1.13.0 to match the Obsidian 1.13 APIs used by the plugin.
+    * Preserved the existing settings page and runtime behavior; only required release metadata was changed.
+
+
+
 * [V2.0.3](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.3) 2026-08-07
   * 审核修复与规范优化
     * 将 manifest 描述改为英文并使用审核器可识别的英文句点结尾。

@@ -1,22 +1,14 @@
-# Easy Bookkeeping 2.0.3
+# Easy Bookkeeping 2.0.4
 
 ## English
 
-Easy Bookkeeping 2.0.3 rebuilds the original Obsidian bookkeeping workflow as a complete local-first plugin.
+Easy Bookkeeping 2.0.4 is a review-fix release.
 
-### Highlights
+### Changes
 
-- Keyboard-only continuous desktop entry and touch-friendly mobile entry
-- Automatic desktop/mobile entry selection
-- Configurable monthly dashboard, charts, budgets, and account balances
-- Linked multi-value filters and filter-aware summaries
-- Sortable, resizable, editable transaction table with batch operations
-- CSV import/export and legacy Markdown conversion with progress and validation reports
-- Receipt and invoice attachments with Markdown previews
-- Multiple accounts, transfers, opening-balance corrections, and automatic carry-over
-- Undoable deletion and global tag management
-- Responsive phone and tablet layouts
-- 12 interface languages
+- Updated the declared minimum Obsidian version to `1.13.0` so it matches the Obsidian APIs already used by the plugin.
+- Kept the existing settings page and plugin behavior unchanged.
+- Synchronized `manifest.json`, `package.json`, `package-lock.json`, and `versions.json` to `2.0.4`.
 
 ### Release assets
 
@@ -26,21 +18,13 @@ Cloud-drive mirror: [Quark Drive](https://pan.quark.cn/s/6e91aa90fec6).
 
 ## 中文
 
-Easy Bookkeeping 2.0.3 将原 Obsidian 记账流程完整重构为本地优先插件。
+Easy Bookkeeping 2.0.4 是审核修复版本。
 
-### 主要更新
+### 更新内容
 
-- 桌面版全键盘连续记账与手机版完整表单
-- 自动识别桌面端、手机端记账方式
-- 可自定义月度仪表盘、图表、预算与账户余额
-- 联动多选筛选，顶部统计与图表同步变化
-- 可排序、拖动列宽、行内编辑和批量操作的账目明细
-- CSV 导入导出、旧版 Markdown 转换、进度和错误报告
-- 小票、发票附件及 Markdown 预览
-- 多账户、转账、月初余额校准和自动结转
-- 撤销删除与标签全局管理
-- 手机、平板响应式布局
-- 12 种界面语言
+- 将声明的最低 Obsidian 版本更新为 `1.13.0`，以匹配插件当前已经使用的 Obsidian API。
+- 保持现有设置页和插件功能行为不变。
+- 同步 `manifest.json`、`package.json`、`package-lock.json`、`versions.json` 到 `2.0.4`。
 
 ### Release 文件
 

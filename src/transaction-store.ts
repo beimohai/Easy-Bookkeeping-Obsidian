@@ -4,6 +4,10 @@ import { errorMessageZh, escapeCsv, monthOf, normalizeDate, normalizeTime, parse
 
 type Frontmatter = Record<string, unknown>;
 
+function isFrontmatter(value: unknown): value is Frontmatter {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 export interface ImportFailure {
   row: number;
   reason: string;
@@ -47,8 +51,8 @@ export class TransactionStore {
     for (const file of this.app.vault.getMarkdownFiles()) {
       if (!file.path.startsWith(root)) continue;
       if (file.path.startsWith(trashRoot)) continue;
-      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter as Frontmatter | undefined;
-      if (!frontmatter) continue;
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (!isFrontmatter(frontmatter)) continue;
       const transaction = this.fromFrontmatter(file, frontmatter);
       if (transaction) transactions.push(transaction);
     }
@@ -182,7 +186,9 @@ export class TransactionStore {
       try {
         const match = source.content.match(/^---\s*\n([\s\S]*?)\n---/);
         if (!match?.[1]) throw new Error("缺少Properties");
-        const frontmatter = parseYaml(match[1]) as Frontmatter;
+        const parsed = parseYaml(match[1]);
+        if (!isFrontmatter(parsed)) throw new Error("Properties格式不合法");
+        const frontmatter = parsed;
         const typeValue = String(frontmatter["类型"] ?? "");
         const type = typeValue === "收入" || typeValue === "转账" ? typeValue : typeValue === "支出" ? "支出" : null;
         const date = normalizeDate(frontmatter["日期"] ?? frontmatter["时间"]);
@@ -443,7 +449,8 @@ export class TransactionStore {
       attachments: ["附件", "attachments", "attachment"]
     };
     const indexOf = (key: string): number => headers.findIndex((header) => (aliases[key] ?? []).includes(header));
-    const indexes = Object.fromEntries(Object.keys(aliases).map((key) => [key, indexOf(key)])) as Record<string, number>;
+    const indexes: Record<string, number> = {};
+    for (const key of Object.keys(aliases)) indexes[key] = indexOf(key);
     if ((indexes["date"] ?? -1) < 0 || (indexes["amount"] ?? -1) < 0) throw new Error("CSV至少需要日期和金额两列");
     const existing = new Set((await this.list()).map((item) => this.fingerprint(item)));
     const failures: ImportFailure[] = [];

@@ -223,12 +223,17 @@ export class KeyboardEntryModal extends Modal {
     return this.optionCodes(step, choices)[index] ?? String(index + 1);
   }
 
+  private isLastStep(step: KeyboardStep): boolean {
+    const steps = this.steps();
+    return steps[steps.length - 1] === step;
+  }
+
   private placeholder(step: KeyboardStep): string {
     if (step === "day") return "输入日期中的日，例如21";
     if (this.optionValues(step).length) return "输入编号，直接回车使用默认值";
     if (step === "title") return "输入账目内容";
     if (step === "amount") return "输入金额或算式，例如11.4+5.1";
-    if (step === "attachments") return this.steps().at(-1) === step ? "按Enter保存，可先拖入或选择附件" : "按Enter继续，可先拖入或选择附件";
+    if (step === "attachments") return this.isLastStep(step) ? "按Enter保存，可先拖入或选择附件" : "按Enter继续，可先拖入或选择附件";
     return "输入备注；无备注直接回车";
   }
 
@@ -237,8 +242,8 @@ export class KeyboardEntryModal extends Modal {
     if (step === "targetAccount") return "选择转入账户";
     if (step === "title") return "输入内容";
     if (step === "amount") return "输入金额";
-    if (step === "note") return this.steps().at(-1) === step ? "输入备注并保存" : "输入备注";
-    if (step === "attachments") return this.steps().at(-1) === step ? "添加附件并保存" : "添加附件";
+    if (step === "note") return this.isLastStep(step) ? "输入备注并保存" : "输入备注";
+    if (step === "attachments") return this.isLastStep(step) ? "添加附件并保存" : "添加附件";
     return `选择${OPTION_FIELD_LABELS[step]}`;
   }
 

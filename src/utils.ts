@@ -1,4 +1,4 @@
-import { moment, normalizePath } from "obsidian";
+import { normalizePath } from "obsidian";
 import type { DateDisplayFormat, Language, NumberGrouping, TimeDisplayFormat, YearMonthDisplayFormat } from "./types";
 export { evaluateAmount } from "./expression";
 
@@ -38,24 +38,56 @@ function localizedDate(value: string, language: Language, options: Intl.DateTime
   return new Intl.DateTimeFormat(LANGUAGE_LOCALES[language], { ...options, timeZone: "UTC" }).format(date);
 }
 
+function validDateParts(year: number, month: number, day: number): boolean {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
+function parseIsoDate(value: string): { year: number; month: number; day: number } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  return validDateParts(year, month, day) ? { year, month, day } : null;
+}
+
+function parseIsoMonth(value: string): { year: number; month: number } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]), month = Number(match[2]);
+  return Number.isInteger(year) && year > 0 && month >= 1 && month <= 12 ? { year, month } : null;
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function formatByTokens(format: string, parts: { year: number; month: number; day?: number }): string {
+  return format
+    .replace(/YYYY/g, String(parts.year))
+    .replace(/MM/g, pad2(parts.month))
+    .replace(/DD/g, parts.day === undefined ? "DD" : pad2(parts.day));
+}
+
 export function formatDateDisplay(value: string, format: DateDisplayFormat, language: Language = "zh-CN"): string {
-  const parsed = moment(value, "YYYY-MM-DD", true);
-  if (!parsed.isValid()) return value;
+  const parsed = parseIsoDate(value);
+  if (!parsed) return value;
   if (language !== "zh-CN" && language !== "zh-TW") {
     if (format === "MM月DD日") return localizedDate(value, language, { month: "2-digit", day: "2-digit" }) ?? value;
     if (format === "YYYY年MM月DD日") return localizedDate(value, language, { year: "numeric", month: "2-digit", day: "2-digit" }) ?? value;
   }
-  return parsed.format(format);
+  return formatByTokens(format, parsed);
 }
 
 export function formatMonthDisplay(value: string, format: YearMonthDisplayFormat, language: Language = "zh-CN"): string {
-  const parsed = moment(value, "YYYY-MM", true);
-  if (!parsed.isValid()) return value;
+  const parsed = parseIsoMonth(value);
+  if (!parsed) return value;
   if (format === "MMM YYYY" || ((format === "YYYY年MM月") && language !== "zh-CN" && language !== "zh-TW")) {
     const date = `${value}-01`;
     return localizedDate(date, language, { year: "numeric", month: format === "MMM YYYY" ? "short" : "long" }) ?? value;
   }
-  return parsed.format(format);
+  return formatByTokens(format, parsed);
 }
 
 export function formatWeekdayLabels(language: Language): string[] {
@@ -63,17 +95,39 @@ export function formatWeekdayLabels(language: Language): string[] {
   return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(Date.UTC(2023, 0, 1 + index))).replace(/[.。]$/u, ""));
 }
 
+function regexForDateFormat(format: DateDisplayFormat): RegExp {
+  const escaped = format.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = escaped.replace(/YYYY/g, "(?<year>\\d{4})").replace(/MM/g, "(?<month>\\d{2})").replace(/DD/g, "(?<day>\\d{2})");
+  return new RegExp(`^${pattern}$`);
+}
+
+function parseByDateFormat(text: string, format: DateDisplayFormat): string | null {
+  const match = regexForDateFormat(format).exec(text);
+  const groups = match?.groups;
+  if (!groups) return null;
+  const currentYear = new Date().getFullYear();
+  const year = groups.year ? Number(groups.year) : currentYear;
+  const month = Number(groups.month);
+  const day = Number(groups.day);
+  return validDateParts(year, month, day) ? `${year}-${pad2(month)}-${pad2(day)}` : null;
+}
+
 export function parseDateDisplay(value: string, format: DateDisplayFormat): string | null {
   const text = value.trim();
   if (!text) return null;
-  const parsed = moment(text, [format, "YYYY-MM-DD"], true);
-  return parsed.isValid() ? parsed.format("YYYY-MM-DD") : null;
+  return parseByDateFormat(text, format) ?? (parseIsoDate(text) ? text : null);
 }
 
 export function formatTimeDisplay(value: string, format: TimeDisplayFormat): string {
-  const parsed = moment(value, "HH:mm", true);
-  if (!parsed.isValid()) return value;
-  return format === "12h" ? parsed.format("hh:mm A") : parsed.format("HH:mm");
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return value;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return value;
+  if (format === "24h") return `${pad2(hour)}:${pad2(minute)}`;
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${pad2(displayHour)}:${pad2(minute)} ${period}`;
 }
 
 export function errorMessageZh(error: unknown, fallback = "操作失败，请稍后重试"): string {
@@ -90,20 +144,23 @@ export function errorMessageZh(error: unknown, fallback = "操作失败，请稍
 }
 
 export function today(): string {
-  return moment().format("YYYY-MM-DD");
+  const date = new Date();
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
 export function currentTime(): string {
-  return moment().format("HH:mm");
+  const date = new Date();
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 }
 
 export function currentMonth(): string {
-  return moment().format("YYYY-MM");
+  const date = new Date();
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
 }
 
 export function normalizeDate(value: unknown): string | null {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return moment(value).format("YYYY-MM-DD");
+    return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
   }
   if (typeof value !== "string" && typeof value !== "number") return null;
   const text = String(value).trim().replace(/\./g, "-").replace(/\//g, "-");
@@ -112,7 +169,7 @@ export function normalizeDate(value: unknown): string | null {
   const [, year, month, day] = match;
   if (!year || !month || !day) return null;
   const result = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  return moment(result, "YYYY-MM-DD", true).isValid() ? result : null;
+  return parseIsoDate(result) ? result : null;
 }
 
 export function normalizeTime(value: unknown): string {

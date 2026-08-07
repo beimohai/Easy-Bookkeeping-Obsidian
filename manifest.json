@@ -1,8 +1,8 @@
 {
   "id": "easy-bookkeeping",
   "name": "Easy Bookkeeping",
-  "version": "2.0.3",
-  "minAppVersion": "1.8.0",
+  "version": "2.0.4",
+  "minAppVersion": "1.13.0",
   "description": "A local-first bookkeeping plugin with fast keyboard entry, mobile forms, configurable dashboards, and Markdown-based records.",
   "author": "北漠海",
   "authorUrl": "https://github.com/beimohai",

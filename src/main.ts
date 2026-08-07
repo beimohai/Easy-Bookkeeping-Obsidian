@@ -11,6 +11,19 @@ import { I18nController, translate } from "./locales";
 
 
 
+function toSettingsLanguage(value: unknown): BookkeepingSettings["language"] | null {
+  if (value === "zh-CN" || value === "zh-TW" || value === "en" || value === "fr" || value === "ru" || value === "es" || value === "ar" || value === "ja" || value === "ko" || value === "de" || value === "pt" || value === "fa") return value;
+  return null;
+}
+
+function isHexColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
+}
+
+function isMonthString(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}$/.test(value);
+}
+
 function attachVaultFolderSuggestions(app: App, input: HTMLInputElement): void {
   const folders = app.vault.getAllLoadedFiles().filter((file): file is TFolder => file instanceof TFolder && Boolean(file.path)).map((folder) => folder.path).sort();
   const id = `bookkeeping-vault-folders-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -22,7 +35,8 @@ function attachVaultFolderSuggestions(app: App, input: HTMLInputElement): void {
     if (!raw) return;
     const exact = folders.find((path) => path.toLocaleLowerCase() === raw.toLocaleLowerCase());
     const byName = folders.filter((path) => path.split("/").pop()?.toLocaleLowerCase() === raw.toLocaleLowerCase());
-    input.value = exact ?? (byName.length === 1 ? byName[0] as string : raw);
+    const matchedFolder = byName.length === 1 ? byName[0] : undefined;
+    input.value = exact ?? matchedFolder ?? raw;
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
   const observer = new MutationObserver(() => { if (!input.isConnected) { datalist.remove(); observer.disconnect(); } });
@@ -311,11 +325,9 @@ export default class BookkeepingPlugin extends Plugin {
       calendarWeekStart: (["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as CalendarWeekStart[]).includes(loaded?.calendarWeekStart as CalendarWeekStart)
         ? loaded?.calendarWeekStart as CalendarWeekStart
         : "sunday",
-      language: (["zh-CN", "zh-TW", "en", "fr", "ru", "es", "ar", "ja", "ko", "de", "pt", "fa"] as const).includes(loaded?.language as never)
-        ? loaded?.language as BookkeepingSettings["language"]
-        : "zh-CN",
-      incomeColor: /^#[0-9a-f]{6}$/i.test(loaded?.incomeColor ?? "") ? loaded?.incomeColor as string : DEFAULT_SETTINGS.incomeColor,
-      expenseColor: /^#[0-9a-f]{6}$/i.test(loaded?.expenseColor ?? "") ? loaded?.expenseColor as string : DEFAULT_SETTINGS.expenseColor,
+      language: toSettingsLanguage(loaded?.language) ?? "zh-CN",
+      incomeColor: isHexColor(loaded?.incomeColor) ? loaded.incomeColor : DEFAULT_SETTINGS.incomeColor,
+      expenseColor: isHexColor(loaded?.expenseColor) ? loaded.expenseColor : DEFAULT_SETTINGS.expenseColor,
       yearMonthDisplayFormat: loaded?.yearMonthDisplayFormat ?? DEFAULT_SETTINGS.yearMonthDisplayFormat,
       filterPersistence: loaded?.filterPersistence === "current" || loaded?.filterPersistence === "monthly"
         ? loaded.filterPersistence
@@ -323,10 +335,10 @@ export default class BookkeepingPlugin extends Plugin {
       saveFiltersOnExit: loaded?.filterPersistence
         ? loaded.filterPersistence !== "none"
         : Boolean(loaded?.saveFiltersOnExit),
-      lastDashboardMonth: /^\d{4}-\d{2}$/.test(loaded?.lastDashboardMonth ?? "") ? loaded?.lastDashboardMonth as string : "",
+      lastDashboardMonth: isMonthString(loaded?.lastDashboardMonth) ? loaded.lastDashboardMonth : "",
       savedDashboardAdvancedFilters: Boolean(loaded?.savedDashboardAdvancedFilters),
       savedMonthlyDashboardAdvancedFilters: { ...(loaded?.savedMonthlyDashboardAdvancedFilters ?? {}) },
-      disabledLanguages: [...new Set((loaded?.disabledLanguages ?? []).filter((language): language is BookkeepingSettings["language"] => (["zh-TW", "en", "fr", "ru", "es", "ar", "ja", "ko", "de", "pt", "fa"] as string[]).includes(language)))],
+      disabledLanguages: [...new Set((loaded?.disabledLanguages ?? []).filter((language): language is BookkeepingSettings["language"] => toSettingsLanguage(language) !== null && language !== "zh-CN"))],
       ribbonPosition: Number.isInteger(loaded?.ribbonPosition) && Number(loaded?.ribbonPosition) >= 0 ? Number(loaded?.ribbonPosition) : -1,
       typeLabels: { ...DEFAULT_SETTINGS.typeLabels, ...(loaded?.typeLabels ?? {}) },
       necessityLabels: { ...DEFAULT_SETTINGS.necessityLabels, ...(loaded?.necessityLabels ?? {}) },
@@ -479,12 +491,12 @@ class LegacyConverterModal extends Modal {
       text.setValue(this.vaultFolder).onChange((value) => this.vaultFolder = value.trim());
       attachVaultFolderSuggestions(this.app, text.inputEl);
     });
-    const externalSetting = new Setting(this.contentEl).setName("旧版账目位置").addButton((button) => button.setButtonText("选择文件夹").setIcon("folder-open").onClick(async () => {
+    const externalSetting = new Setting(this.contentEl).setName("旧版账目位置").addButton((button) => button.setButtonText("选择文件夹").setIcon("folder-open").onClick(() => { void (async () => {
       const path = await this.chooseExternalFolder();
       if (!path) return;
       this.externalFolder = path;
       externalSetting.setDesc(path);
-    }));
+    })(); }));
     const refresh = (): void => {
       vaultSetting.settingEl.toggleClass("bookkeeping-hidden", this.source !== "vault");
       externalSetting.settingEl.toggleClass("bookkeeping-hidden", this.source !== "external");
@@ -495,14 +507,14 @@ class LegacyConverterModal extends Modal {
     const error = this.contentEl.createDiv({ cls: "bookkeeping-form-error" });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("开始转换").setCta().onClick(async () => {
+    new ButtonComponent(actions).setButtonText("开始转换").setCta().onClick(() => { void (async () => {
       try {
         error.empty();
         if (this.source === "vault" && !this.vaultFolder) throw new Error("请选择仓库内旧账目录");
         if (this.source === "external" && !this.externalFolder) throw new Error("请先选择外部旧账文件夹");
         await this.run();
       } catch (convertError) { error.setText(errorMessageZh(convertError, "旧版账目转换失败")); }
-    });
+    })(); });
   }
 
   private async run(): Promise<void> {
@@ -718,7 +730,7 @@ class CsvExportModal extends Modal {
     const error = this.contentEl.createDiv({ cls: "bookkeeping-form-error" });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("导出").setCta().onClick(async () => {
+    new ButtonComponent(actions).setButtonText("导出").setCta().onClick(() => { void (async () => {
       try {
         error.empty();
         if (this.destination === "vault" && !this.folder) throw new Error("保存目录不能为空");
@@ -745,7 +757,7 @@ class CsvExportModal extends Modal {
       } catch (exportError) {
         error.setText(errorMessageZh(exportError, "CSV导出失败，请检查保存目录"));
       }
-    });
+    })(); });
   }
 
   private async saveCsvToComputer(csv: string, fileName: string): Promise<string> {
@@ -1057,14 +1069,14 @@ class AnnualChartsManagerModal extends Modal {
       const controls = row.createDiv({ cls: "bookkeeping-annual-manager-actions" });
       const eye = controls.createEl("button", { cls: "clickable-icon", attr: { type: "button", "aria-label": chart.visible ? "隐藏图表" : "显示图表" } });
       setIcon(eye, chart.visible ? "eye" : "eye-off");
-      eye.addEventListener("click", async () => { chart.visible = !chart.visible; await this.plugin.saveSettingsQuietly(); this.render(); });
+      eye.addEventListener("click", () => { void (async () => { chart.visible = !chart.visible; await this.plugin.saveSettingsQuietly(); this.render(); })(); });
       new ButtonComponent(controls).setIcon("settings-2").setTooltip("配置").onClick(() => new AnnualChartSettingsModal(this.app, this.plugin, chart, () => { this.onSaved(); this.render(); }).open());
     }
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
-    new ButtonComponent(actions).setButtonText("添加图表").setIcon("plus").onClick(async () => {
+    new ButtonComponent(actions).setButtonText("添加图表").setIcon("plus").onClick(() => { void (async () => {
       this.plugin.settings.annualChartConfigs.push({ id: `annual-${Date.now()}`, title: "月份结余趋势", metric: "monthlyNet", visible: true });
       await this.plugin.saveSettingsQuietly(); this.onSaved(); this.render();
-    });
+    })(); });
     new ButtonComponent(actions).setButtonText("完成").setCta().onClick(() => { this.onSaved(); this.close(); });
   }
 }
@@ -1077,9 +1089,9 @@ class AnnualChartSettingsModal extends Modal {
     new Setting(this.contentEl).setName("图表内容").addDropdown((dropdown) => dropdown.addOptions(ANNUAL_METRICS).setValue(this.metric).onChange((value) => this.metric = value as AnnualChartMetric));
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("隐藏图表").setIcon("eye-off").onClick(async () => { this.chart.visible = false; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); });
-    new ButtonComponent(actions).setButtonText("删除图表").setDestructive().onClick(async () => { this.plugin.settings.annualChartConfigs = this.plugin.settings.annualChartConfigs.filter((item) => item.id !== this.chart.id); await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); });
-    new ButtonComponent(actions).setButtonText("保存").setCta().onClick(async () => { this.chart.metric = this.metric; this.chart.title = ANNUAL_METRICS[this.metric]; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); });
+    new ButtonComponent(actions).setButtonText("隐藏图表").setIcon("eye-off").onClick(() => { void (async () => { this.chart.visible = false; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
+    new ButtonComponent(actions).setButtonText("删除图表").setDestructive().onClick(() => { void (async () => { this.plugin.settings.annualChartConfigs = this.plugin.settings.annualChartConfigs.filter((item) => item.id !== this.chart.id); await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
+    new ButtonComponent(actions).setButtonText("保存").setCta().onClick(() => { void (async () => { this.chart.metric = this.metric; this.chart.title = ANNUAL_METRICS[this.metric]; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
   }
 }
 

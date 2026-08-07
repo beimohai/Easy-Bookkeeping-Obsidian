@@ -57,7 +57,7 @@ export class TransactionModal extends Modal {
           .addOptions(typeOptions)
           .setValue(this.draft.type)
           .onChange((value) => {
-            this.draft.type = value as TransactionType;
+            this.draft.type = value;
             refresh();
           }));
         optionSettings.set(field, setting);
@@ -128,7 +128,7 @@ export class TransactionModal extends Modal {
     new ButtonComponent(actions)
       .setButtonText(this.existing ? "保存修改" : "保存账目")
       .setCta()
-      .onClick(async () => {
+      .onClick(() => { void (async () => {
         try {
           await this.submit();
           if (!this.existing && (this.forceContinuous || this.settings.mobileContinuousEntry)) {
@@ -148,7 +148,7 @@ export class TransactionModal extends Modal {
         } catch (error) {
           this.errorEl.setText(errorMessageZh(error, "账目保存失败，请检查输入和存储目录"));
         }
-      });
+      })(); });
 
     window.setTimeout(() => titleInput.inputEl.focus(), 50);
   }
