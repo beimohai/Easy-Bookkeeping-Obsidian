@@ -24,6 +24,10 @@ function isMonthString(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}$/.test(value);
 }
 
+type StoredBookkeepingSettings = Partial<BookkeepingSettings> & {
+  continuousEntry?: unknown;
+};
+
 function attachVaultFolderSuggestions(app: App, input: HTMLInputElement): void {
   const folders = app.vault.getAllLoadedFiles().filter((file): file is TFolder => file instanceof TFolder && Boolean(file.path)).map((folder) => folder.path).sort();
   const id = `bookkeeping-vault-folders-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -293,7 +297,7 @@ export default class BookkeepingPlugin extends Plugin {
 
 
   private async loadSettings(): Promise<void> {
-    const loaded = await this.loadData() as Partial<BookkeepingSettings> | null;
+    const loaded = await this.loadData() as StoredBookkeepingSettings | null;
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...(loaded ?? {}),
@@ -306,7 +310,7 @@ export default class BookkeepingPlugin extends Plugin {
       monthlyBudgets: loaded?.monthlyBudgets ?? {},
       monthlyOpeningBalances: loaded?.monthlyOpeningBalances ?? {},
       desktopContinuousEntry: loaded?.desktopContinuousEntry ?? true,
-      mobileContinuousEntry: loaded?.mobileContinuousEntry ?? Boolean((loaded as unknown as Record<string, unknown> | null)?.["continuousEntry"]),
+      mobileContinuousEntry: loaded?.mobileContinuousEntry ?? Boolean(loaded?.continuousEntry),
       optionFieldOrder: this.completeOrder(loaded?.optionFieldOrder, DEFAULT_SETTINGS.optionFieldOrder),
       tableColumnOrder: this.completeOrder(loaded?.tableColumnOrder, DEFAULT_SETTINGS.tableColumnOrder),
       tableColumnWidths: { ...(loaded?.tableColumnWidths ?? {}) },
@@ -314,7 +318,7 @@ export default class BookkeepingPlugin extends Plugin {
       editableColumns: loaded?.editableColumns ?? [...DEFAULT_SETTINGS.editableColumns],
       attachmentFolder: loaded?.attachmentFolder || DEFAULT_SETTINGS.attachmentFolder,
       tableColumnLabels: { ...DEFAULT_SETTINGS.tableColumnLabels, ...(loaded?.tableColumnLabels ?? {}), tags: loaded?.tableColumnLabels?.tags === "Tag" ? "标签" : (loaded?.tableColumnLabels?.tags ?? DEFAULT_SETTINGS.tableColumnLabels.tags) },
-      chartConfigs: this.migrateChartConfigs(loaded?.chartConfigs as unknown[] | undefined, loaded?.showBudgetPanel, loaded?.showAccountPanel),
+      chartConfigs: this.migrateChartConfigs(loaded?.chartConfigs, loaded?.showBudgetPanel, loaded?.showAccountPanel),
       annualChartConfigs: loaded?.annualChartConfigs?.length
         ? loaded.annualChartConfigs.map((chart) => ({ ...chart }))
         : DEFAULT_SETTINGS.annualChartConfigs.map((chart) => ({ ...chart })),
@@ -1094,4 +1098,3 @@ class AnnualChartSettingsModal extends Modal {
     new ButtonComponent(actions).setButtonText("保存").setCta().onClick(() => { void (async () => { this.chart.metric = this.metric; this.chart.title = ANNUAL_METRICS[this.metric]; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
   }
 }
-

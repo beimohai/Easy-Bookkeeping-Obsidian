@@ -81,12 +81,13 @@ export class TransactionStore {
     }
     const dateChanged = draft.date !== transaction.date;
     await this.app.fileManager.processFrontMatter(transaction.file, (frontmatter) => {
+      const properties = frontmatter as Frontmatter;
       const next = this.toFrontmatter(draft, transaction.id === transaction.file.path ? this.makeId() : transaction.id);
-      delete frontmatter["日期"];
-      delete frontmatter["时刻"];
-      if (draft.type !== "转账") delete frontmatter["目标账户"];
-      if (!draft.attachments.length) delete frontmatter["附件"];
-      Object.assign(frontmatter, next);
+      delete properties["日期"];
+      delete properties["时刻"];
+      if (draft.type !== "转账") delete properties["目标账户"];
+      if (!draft.attachments.length) delete properties["附件"];
+      Object.assign(properties, next);
     });
     await this.syncAttachmentSection(transaction.file, draft.attachments);
     if (dateChanged && this.app.vault.getAbstractFileByPath(transaction.file.path)) {
@@ -186,7 +187,7 @@ export class TransactionStore {
       try {
         const match = source.content.match(/^---\s*\n([\s\S]*?)\n---/);
         if (!match?.[1]) throw new Error("缺少Properties");
-        const parsed = parseYaml(match[1]);
+        const parsed: unknown = parseYaml(match[1]);
         if (!isFrontmatter(parsed)) throw new Error("Properties格式不合法");
         const frontmatter = parsed;
         const typeValue = String(frontmatter["类型"] ?? "");

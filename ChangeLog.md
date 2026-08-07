@@ -1,5 +1,15 @@
 # 更新日志 Changelog
 
+* [V2.0.5](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.5) 2026-08-07
+  * 审核 Warning 修复
+    * 移除不必要的 TypeScript 断言，保留旧版连续记账配置迁移逻辑。
+    * 收紧 YAML 与 Properties/frontmatter 的类型边界，不改变账目导入、编辑或保存行为。
+    * 将设置页内部刷新调用改为 Obsidian 推荐的 `update()`，保持现有设置页 UI 不变。
+  * Review warning fixes
+    * Removed unnecessary TypeScript assertions while preserving legacy continuous-entry settings migration.
+    * Tightened YAML and frontmatter type boundaries without changing transaction import, edit, or save behavior.
+    * Switched internal settings-tab refresh calls to Obsidian's recommended `update()` while keeping the existing settings UI unchanged.
+
 * [V2.0.4](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.4) 2026-08-07
   * 审核修复
     * 将最低 Obsidian 版本声明更新为 1.13.0，匹配当前使用的 Obsidian 1.13 API。

@@ -62,10 +62,10 @@ export class BookkeepingSettingTab extends PluginSettingTab {
       .addOptions(availableLanguages).setValue(this.plugin.settings.language).onChange((value) => { void (async () => {
         this.plugin.settings.language = toLanguage(value);
         await this.plugin.saveSettingsQuietly();
-        this.display();
+        this.update();
       })(); }));
     new Setting(containerEl).setName("语言包管理").addButton((button) => button
-      .setButtonText("管理语言包").setIcon("languages").onClick(() => new LanguagePackModal(this.app, this.plugin, () => this.display()).open()));
+      .setButtonText("管理语言包").setIcon("languages").onClick(() => new LanguagePackModal(this.app, this.plugin, () => this.update()).open()));
     new Setting(containerEl).setName("退出后是否保持页面").addDropdown((dropdown) => dropdown
       .addOptions({ none: "不保持", current: "保持当前筛选", monthly: "保持当月界面" })
       .setValue(this.plugin.settings.filterPersistence).onChange((value) => { void (async () => {
