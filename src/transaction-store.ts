@@ -114,7 +114,7 @@ export class TransactionStore {
   }
 
   async remove(transaction: Transaction): Promise<void> {
-    await this.app.vault.trash(transaction.file, true);
+    await this.app.fileManager.trashFile(transaction.file);
   }
 
   async stageRemove(transaction: Transaction): Promise<PendingDelete> {
@@ -134,13 +134,13 @@ export class TransactionStore {
   }
 
   async finalizeRemove(pending: PendingDelete): Promise<void> {
-    if (this.app.vault.getAbstractFileByPath(pending.file.path)) await this.app.vault.trash(pending.file, true);
+    if (this.app.vault.getAbstractFileByPath(pending.file.path)) await this.app.fileManager.trashFile(pending.file);
   }
 
   async cleanupPendingDeletes(): Promise<void> {
     const trashRoot = `${safeFolder(this.getSettings().ledgerFolder)}/.bookkeeping-trash/`;
     for (const file of this.app.vault.getMarkdownFiles().filter((item) => item.path.startsWith(trashRoot))) {
-      await this.app.vault.trash(file, true);
+      await this.app.fileManager.trashFile(file);
     }
   }
 
@@ -399,7 +399,7 @@ export class TransactionStore {
   inspectCsvMetadata(text: string): CsvMetadataAnalysis {
     const rows = parseCsv(text);
     if (rows.length < 2) return { differences: [], hasDifferences: false };
-    const headers = (rows[0] ?? []).map((header) => header.toLocaleLowerCase("zh-CN").replace(/[\s_\-]/g, ""));
+    const headers = (rows[0] ?? []).map((header) => header.toLocaleLowerCase("zh-CN").replace(/[\s_-]/g, ""));
     const find = (...aliases: string[]): number => headers.findIndex((header) => aliases.includes(header));
     const indexes = {
       type: find("类型", "收支类型", "交易类型", "type"),
@@ -426,7 +426,7 @@ export class TransactionStore {
   async importCsv(text: string, onProgress?: (done: number, total: number) => void, normalizeMetadata = false): Promise<ImportResult> {
     const rows = parseCsv(text);
     if (rows.length < 2) throw new Error("CSV没有可导入的数据行");
-    const headers = (rows[0] ?? []).map((header) => header.toLocaleLowerCase("zh-CN").replace(/[\s_\-]/g, ""));
+    const headers = (rows[0] ?? []).map((header) => header.toLocaleLowerCase("zh-CN").replace(/[\s_-]/g, ""));
     const aliases: Record<string, string[]> = {
       date: ["日期", "交易日期", "date", "datetime", "时间"],
       time: ["时间", "时刻", "交易时间", "time"],

@@ -1,5 +1,18 @@
 # 更新日志 Changelog
 
+* [V2.0.3](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.3) 2026-08-07
+  * 审核修复与规范优化
+    * 将 manifest 描述改为英文并使用审核器可识别的英文句点结尾。
+    * 移除设置页重复插件名标题，并继续保持由 Obsidian 插件市场负责更新。
+    * 为 Release 工作流加入 GitHub Artifact Attestations，便于验证 `main.js`、`manifest.json`、`styles.css` 的来源。
+    * 优化部分审核 Warning：改用 Obsidian SVG/DOM helper、`messageEl`、`setDestructive()`、跨窗口安全类型判断，并清理不必要的空 catch、全角空格和正则转义。
+  * Review fixes and compliance improvements
+    * Replaced the manifest description with English text and ended it with an ASCII period recognized by the review tool.
+    * Removed the duplicated plugin-name heading from settings and kept updates delegated to the Obsidian community plugin catalog.
+    * Added GitHub Artifact Attestations to the Release workflow for `main.js`, `manifest.json`, and `styles.css`.
+    * Reduced review warnings by using Obsidian SVG/DOM helpers, `messageEl`, `setDestructive()`, cross-window-safe type checks, and by cleaning up empty catches, irregular whitespace, and regex escapes.
+
+
 * [V2.0.2](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.2) 2026-08-06
   * 发布规范与文档
     * 将插件版本同步到 2.0.2，并改用不带 `v` 的 GitHub tag。

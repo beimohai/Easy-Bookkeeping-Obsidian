@@ -52,7 +52,7 @@ export class KeyboardEntryModal extends Modal {
     const index = Math.max(steps.indexOf(this.step), 0);
     const progress = content.createDiv({ cls: "bookkeeping-keyboard-progress" });
     progress.createDiv({ cls: "bookkeeping-keyboard-progress-fill", attr: { style: `width:${(index + 1) / steps.length * 100}%` } });
-    content.createDiv({ cls: "bookkeeping-keyboard-step", text: `${index + 1}/${steps.length}　${this.stepTitle(this.step)}` });
+    content.createDiv({ cls: "bookkeeping-keyboard-step", text: `${index + 1}/${steps.length} ${this.stepTitle(this.step)}` });
 
     const optionValues = this.optionValues(this.step);
     const optionCodes = this.optionCodes(this.step, optionValues);
@@ -100,7 +100,7 @@ export class KeyboardEntryModal extends Modal {
     });
 
     this.errorEl = content.createDiv({ cls: "bookkeeping-form-error" });
-    content.createDiv({ cls: "bookkeeping-keyboard-help", text: `${this.displayKey(this.settings.keyboardShortcuts.confirm)}确认　${this.displayKey(this.settings.keyboardShortcuts.previous)}/${this.displayKey(this.settings.keyboardShortcuts.next)}选择　${this.displayKey(this.settings.keyboardShortcuts.back)}返回　${this.displayKey(this.settings.keyboardShortcuts.close)}关闭` });
+    content.createDiv({ cls: "bookkeeping-keyboard-help", text: `${this.displayKey(this.settings.keyboardShortcuts.confirm)}确认 ${this.displayKey(this.settings.keyboardShortcuts.previous)}/${this.displayKey(this.settings.keyboardShortcuts.next)}选择 ${this.displayKey(this.settings.keyboardShortcuts.back)}返回 ${this.displayKey(this.settings.keyboardShortcuts.close)}关闭` });
     window.setTimeout(() => {
       this.inputEl.focus();
       this.inputEl.select();

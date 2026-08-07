@@ -1,8 +1,8 @@
-# Easy Bookkeeping 2.0.2
+# Easy Bookkeeping 2.0.3
 
 ## English
 
-Easy Bookkeeping 2.0.2 rebuilds the original Obsidian bookkeeping workflow as a complete local-first plugin.
+Easy Bookkeeping 2.0.3 rebuilds the original Obsidian bookkeeping workflow as a complete local-first plugin.
 
 ### Highlights
 
@@ -26,7 +26,7 @@ Cloud-drive mirror: [Quark Drive](https://pan.quark.cn/s/6e91aa90fec6).
 
 ## 中文
 
-Easy Bookkeeping 2.0.2 将原 Obsidian 记账流程完整重构为本地优先插件。
+Easy Bookkeeping 2.0.3 将原 Obsidian 记账流程完整重构为本地优先插件。
 
 ### 主要更新
 

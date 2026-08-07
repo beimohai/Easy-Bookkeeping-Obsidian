@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -23,6 +25,13 @@ jobs:
         run: |
           test "${GITHUB_REF_NAME}" = "$(node -p "require('./manifest.json').version")"
           test "${GITHUB_REF_NAME}" = "$(node -p "require('./package.json').version")"
+      - name: Attest release assets
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
       - uses: softprops/action-gh-release@v2
         with:
           body_path: RELEASE_NOTES.md

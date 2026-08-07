@@ -1,9 +1,9 @@
 {
   "id": "easy-bookkeeping",
   "name": "Easy Bookkeeping",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "minAppVersion": "1.8.0",
-  "description": "本地优先记账插件：全键盘连续录入、移动表单、可配置仪表盘与 Markdown 账目。",
+  "description": "A local-first bookkeeping plugin with fast keyboard entry, mobile forms, configurable dashboards, and Markdown-based records.",
   "author": "北漠海",
   "authorUrl": "https://github.com/beimohai",
   "isDesktopOnly": false

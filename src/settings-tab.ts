@@ -28,8 +28,6 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     containerEl.empty();
     containerEl.addClass("bookkeeping-settings");
     containerEl.toggleClass("is-mobile", Platform.isMobile);
-    new Setting(containerEl).setName("Easy Bookkeeping").setHeading();
-
     this.section("通用");
     const availableLanguages = Object.fromEntries(Object.entries(LANGUAGE_OPTIONS).filter(([language]) => !this.plugin.settings.disabledLanguages.includes(language as Language)));
     new Setting(containerEl).setName("插件语言").addDropdown((dropdown) => dropdown
@@ -266,7 +264,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     details.createEl("a", { text: "Easy Bookkeeping", attr: { href: PROJECT_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: "作者：北漠海", attr: { href: BILIBILI_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: `版本号：${this.plugin.manifest.version}`, attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
-    details.createEl("a", { text: "更新日期：2026-08-06", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
+    details.createEl("a", { text: "更新日期：2026-08-07", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
     footer.createDiv({ text: "本项目基于 MIT License 开源", cls: "bookkeeping-plugin-footer-license" });
   }
 
@@ -575,7 +573,7 @@ class LanguagePackModal extends Modal {
           return;
         }
         button.setButtonText(removed ? "恢复" : "删除");
-        if (!removed) button.setWarning();
+        if (!removed) button.setDestructive();
         button.onClick(async () => {
           this.plugin.settings.disabledLanguages = removed
             ? this.plugin.settings.disabledLanguages.filter((value) => value !== language)

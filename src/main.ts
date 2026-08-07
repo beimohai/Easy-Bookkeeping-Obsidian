@@ -110,7 +110,7 @@ export default class BookkeepingPlugin extends Plugin {
 
   notice(source: string, duration?: number): Notice {
     const notice = new Notice(this.t(source), duration);
-    notice.noticeEl.addClass("bookkeeping-notice");
+    notice.messageEl.addClass("bookkeeping-notice");
     return notice;
   }
 
@@ -127,7 +127,7 @@ export default class BookkeepingPlugin extends Plugin {
     const parent = icon?.parentElement;
     const position = this.settings.ribbonPosition;
     if (!icon || !parent || !Number.isInteger(position) || position < 0) return;
-    const siblings = Array.from(parent.children).filter((element): element is HTMLElement => element instanceof HTMLElement && element !== icon);
+    const siblings = Array.from(parent.children).filter((element): element is HTMLElement => element.instanceOf(HTMLElement) && element !== icon);
     const reference = siblings[Math.min(position, siblings.length)];
     if (reference) parent.insertBefore(icon, reference);
     else parent.appendChild(icon);
@@ -221,7 +221,7 @@ export default class BookkeepingPlugin extends Plugin {
   }
 
   openCsvImporter(): void {
-    const input = document.createElement("input");
+    const input = createEl("input");
     input.type = "file";
     input.accept = ".csv,text/csv";
     input.addEventListener("change", () => {
@@ -815,7 +815,7 @@ class TagManagerModal extends Modal {
         save.addEventListener("click", submit);
         input.addEventListener("keydown", (event) => { if (event.key === "Enter") submit(); else if (event.key === "Escape") void this.renderTags(); });
       });
-      new ButtonComponent(row).setIcon("trash-2").setTooltip(`删除#${tag}`).setWarning().onClick(() => {
+      new ButtonComponent(row).setIcon("trash-2").setTooltip(`删除#${tag}`).setDestructive().onClick(() => {
         new ConfirmTagDeleteModal(this.app, tag, count,
           () => void this.runTagAction(tag, null),
           () => void this.runDeleteTransactions(tag)).open();
@@ -868,7 +868,7 @@ class ConfirmTagDeleteModal extends Modal {
       this.close();
       this.onRemoveTag();
     });
-    new ButtonComponent(actions).setButtonText("删除相关账目").setWarning().onClick(() => {
+    new ButtonComponent(actions).setButtonText("删除相关账目").setDestructive().onClick(() => {
       this.close();
       this.onDeleteTransactions();
     });
@@ -986,28 +986,28 @@ class PeriodStatsModal extends Modal {
     let min = Math.min(0, ...values), max = Math.max(0, ...values);
     if (min === max) { min -= 1; max += 1; }
     const span = Math.max(max - min, 1);
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const svg = createSvg("svg");
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
     svg.classList.add("bookkeeping-annual-trend-svg");
     const point = (index: number, value: number): [number, number] => [left + index * (width - left - right) / 11, top + (max - value) / span * (height - top - bottom)];
     for (let tick = 0; tick < 6; tick++) {
       const value = max - span * tick / 5;
       const y = top + (height - top - bottom) * tick / 5;
-      const line = document.createElementNS(svg.namespaceURI, "line");
+      const line = svg.createSvg("line");
       line.setAttribute("x1", String(left)); line.setAttribute("x2", String(width - right)); line.setAttribute("y1", String(y)); line.setAttribute("y2", String(y));
       line.setAttribute("class", Math.abs(value) < span / 100 ? "bookkeeping-annual-zero" : "bookkeeping-annual-grid");
       svg.appendChild(line);
-      const label = document.createElementNS(svg.namespaceURI, "text");
+      const label = svg.createSvg("text");
       label.setAttribute("x", String(left - 8)); label.setAttribute("y", String(y + 4)); label.setAttribute("text-anchor", "end");
       label.textContent = this.compactNumber(value); svg.appendChild(label);
     }
-    const path = document.createElementNS(svg.namespaceURI, "polyline");
+    const path = svg.createSvg("polyline");
     path.setAttribute("points", values.map((value, index) => point(index, value).join(",")).join(" "));
     path.setAttribute("class", "bookkeeping-annual-line"); svg.appendChild(path);
     values.forEach((value, index) => {
       const [x, y] = point(index, value);
-      const dot = document.createElementNS(svg.namespaceURI, "circle"); dot.setAttribute("cx", String(x)); dot.setAttribute("cy", String(y)); dot.setAttribute("r", "3"); dot.setAttribute("class", "bookkeeping-annual-dot"); svg.appendChild(dot);
-      const label = document.createElementNS(svg.namespaceURI, "text"); label.setAttribute("x", String(x)); label.setAttribute("y", String(height - 10)); label.setAttribute("text-anchor", "middle"); label.textContent = `${index + 1}月`; svg.appendChild(label);
+      const dot = svg.createSvg("circle"); dot.setAttribute("cx", String(x)); dot.setAttribute("cy", String(y)); dot.setAttribute("r", "3"); dot.setAttribute("class", "bookkeeping-annual-dot"); svg.appendChild(dot);
+      const label = svg.createSvg("text"); label.setAttribute("x", String(x)); label.setAttribute("y", String(height - 10)); label.setAttribute("text-anchor", "middle"); label.textContent = `${index + 1}月`; svg.appendChild(label);
     });
     parent.appendChild(svg);
   }
@@ -1078,7 +1078,7 @@ class AnnualChartSettingsModal extends Modal {
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
     new ButtonComponent(actions).setButtonText("隐藏图表").setIcon("eye-off").onClick(async () => { this.chart.visible = false; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); });
-    new ButtonComponent(actions).setButtonText("删除图表").setWarning().onClick(async () => { this.plugin.settings.annualChartConfigs = this.plugin.settings.annualChartConfigs.filter((item) => item.id !== this.chart.id); await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); });
+    new ButtonComponent(actions).setButtonText("删除图表").setDestructive().onClick(async () => { this.plugin.settings.annualChartConfigs = this.plugin.settings.annualChartConfigs.filter((item) => item.id !== this.chart.id); await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); });
     new ButtonComponent(actions).setButtonText("保存").setCta().onClick(async () => { this.chart.metric = this.metric; this.chart.title = ANNUAL_METRICS[this.metric]; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); });
   }
 }

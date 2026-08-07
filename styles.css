@@ -768,10 +768,6 @@
   text-align: center;
 }
 
-.bookkeeping-chart-panel .bookkeeping-panel-body:has(> .bookkeeping-empty:only-child) {
-  display: grid;
-  place-items: center;
-}
 
 .bookkeeping-chart-panel .bookkeeping-panel-body > .bookkeeping-empty:only-child {
   width: 100%;
@@ -780,8 +776,8 @@
 
 .bookkeeping-table-empty-cell {
   height: clamp(150px, 24vh, 230px);
-  padding: 0 !important;
-  overflow: visible !important;
+  padding: 0;
+  overflow: visible;
   color: var(--text-muted);
   background: var(--background-primary);
   vertical-align: middle;
@@ -801,7 +797,7 @@
 
 .bookkeeping-table-empty-row:hover,
 .bookkeeping-table-empty-row:hover .bookkeeping-table-empty-cell {
-  background: var(--background-primary) !important;
+  background: var(--background-primary);
 }
 
 .bookkeeping-transactions-heading {
@@ -1022,9 +1018,9 @@
 .bookkeeping-select-column {
   width: 36px;
   min-width: 36px;
-  padding-right: 5px !important;
-  padding-left: 5px !important;
-  text-align: center !important;
+  padding-right: 5px;
+  padding-left: 5px;
+  text-align: center;
 }
 
 .bookkeeping-table tr.is-selected {
@@ -1176,8 +1172,8 @@
 .bookkeeping-inline-select {
   width: 100%;
   min-width: 0;
-  height: 29px !important;
-  padding: 2px 5px !important;
+  height: 29px;
+  padding: 2px 5px;
   font-size: var(--font-ui-small);
 }
 
@@ -1190,8 +1186,8 @@
 
 .bookkeeping-inline-amount-editor .bookkeeping-inline-input {
   flex: 1 1 auto;
-  padding-right: 2px !important;
-  padding-left: 2px !important;
+  padding-right: 2px;
+  padding-left: 2px;
 }
 
 .bookkeeping-fixed-sign {
@@ -1276,8 +1272,8 @@
 .bookkeeping-tag-input {
   width: 64px;
   min-width: 0;
-  height: 25px !important;
-  padding: 2px 4px !important;
+  height: 25px;
+  padding: 2px 4px;
   font-size: var(--font-smallest);
 }
 
@@ -1714,7 +1710,7 @@
 }
 
 .bookkeeping-hidden {
-  display: none !important;
+  display: none;
 }
 
 .bookkeeping-keyboard-modal {
@@ -1805,7 +1801,7 @@
 
 .bookkeeping-keyboard-input {
   width: 100%;
-  height: 44px !important;
+  height: 44px;
   font-size: 1.05rem;
 }
 
@@ -2281,35 +2277,35 @@
 .bookkeeping-multi-filter-option input[type="checkbox"]:checked,
 .bookkeeping-cross-month-filter input[type="checkbox"]:checked,
 .bookkeeping-select-column input[type="checkbox"]:checked {
-  background-color: var(--interactive-accent) !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.1 8.3 6.4 11.4 13 4.8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-size: 14px 14px !important;
+  background-color: var(--interactive-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.1 8.3 6.4 11.4 13 4.8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
 }
 
 .bookkeeping-modal input[type="checkbox"]:checked,
 .bookkeeping-settings input[type="checkbox"]:checked {
-  background-color: var(--interactive-accent) !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.1 8.3 6.4 11.4 13 4.8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-size: 14px 14px !important;
+  background-color: var(--interactive-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.1 8.3 6.4 11.4 13 4.8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
 }
 
 .bookkeeping-multi-filter-option input[type="checkbox"]:checked::after,
 .bookkeeping-cross-month-filter input[type="checkbox"]:checked::after,
 .bookkeeping-select-column input[type="checkbox"]:checked::after {
-  display: none !important;
+  display: none;
 }
 
 .bookkeeping-multi-filter-option input[type="checkbox"]:indeterminate,
 .bookkeeping-select-column input[type="checkbox"]:indeterminate {
-  background-color: var(--interactive-accent) !important;
-  background-image: linear-gradient(white, white) !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-  background-size: 8px 2px !important;
+  background-color: var(--interactive-accent);
+  background-image: linear-gradient(white, white);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 8px 2px;
 }
 
 .bookkeeping-period-modal {
@@ -2367,10 +2363,6 @@
   overflow: auto;
 }
 
-.bookkeeping-annual-chart-body:has(> .bookkeeping-empty-panel:only-child) {
-  display: grid;
-  place-items: center;
-}
 
 .bookkeeping-empty-panel {
   display: grid;
@@ -2509,7 +2501,7 @@
 
 .bookkeeping-chart-kind-tag .bookkeeping-panel-body,
 .bookkeeping-chart-kind-account .bookkeeping-panel-body {
-  padding-inline: 18px !important;
+  padding-inline: 18px;
 }
 
 @media (max-width: 600px) {
@@ -2947,12 +2939,12 @@
 .bookkeeping-multi-filter-option input,
 .bookkeeping-cross-month-filter input,
 .bookkeeping-select-column input {
-  width: 16px !important;
-  min-width: 16px !important;
-  max-width: 16px !important;
-  height: 16px !important;
-  min-height: 16px !important;
-  max-height: 16px !important;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  max-height: 16px;
   box-sizing: border-box;
   flex: 0 0 16px;
   margin: 0;
@@ -3043,8 +3035,8 @@
   width: 40px;
   min-width: 40px;
   box-sizing: border-box;
-  padding-right: 8px !important;
-  padding-left: 8px !important;
+  padding-right: 8px;
+  padding-left: 8px;
 }
 
 .bookkeeping-select-column input {
@@ -3361,7 +3353,7 @@
 }
 
 .bookkeeping-is-resizing-column {
-  cursor: col-resize !important;
+  cursor: col-resize;
   user-select: none;
 }
 
@@ -3496,9 +3488,6 @@
   margin-bottom: 5px;
 }
 
-body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plugin-word-count {
-  display: none;
-}
 
 .bookkeeping-dashboard-inner {
   padding: 14px 18px 26px;
@@ -3628,13 +3617,13 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
 .bookkeeping-select-column input[type="checkbox"] {
   display: grid;
   place-content: center;
-  width: 16px !important;
-  min-width: 16px !important;
-  max-width: 16px !important;
-  height: 16px !important;
-  min-height: 16px !important;
-  max-height: 16px !important;
-  padding: 0 !important;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  max-height: 16px;
+  padding: 0;
   appearance: none;
   border: 1px solid var(--checkbox-border-color, var(--background-modifier-border-focus));
   border-radius: 3px;
@@ -3706,7 +3695,7 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
 }
 
 .bookkeeping-range-clear {
-  right: 2px !important;
+  right: 2px;
   width: 24px;
   height: 24px;
   padding: 4px;
@@ -3775,33 +3764,33 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
 .bookkeeping-multi-filter-option input[type="checkbox"],
 .bookkeeping-cross-month-filter input[type="checkbox"],
 .bookkeeping-select-column input[type="checkbox"] {
-  position: relative !important;
-  display: inline-grid !important;
-  place-items: center !important;
-  transform: none !important;
-  background-image: none !important;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  transform: none;
+  background-image: none;
 }
 
 .bookkeeping-multi-filter-option input[type="checkbox"]::after,
 .bookkeeping-cross-month-filter input[type="checkbox"]::after,
 .bookkeeping-select-column input[type="checkbox"]::after {
-  position: static !important;
-  inset: auto !important;
+  position: static;
+  inset: auto;
   display: none;
-  margin: 0 !important;
+  margin: 0;
 }
 
 .bookkeeping-multi-filter-option input[type="checkbox"]:checked::after,
 .bookkeeping-cross-month-filter input[type="checkbox"]:checked::after,
 .bookkeeping-select-column input[type="checkbox"]:checked::after {
   display: block;
-  transform: translateY(-1px) rotate(45deg) !important;
+  transform: translateY(-1px) rotate(45deg);
 }
 
 .bookkeeping-multi-filter-option input[type="checkbox"]:indeterminate::after,
 .bookkeeping-select-column input[type="checkbox"]:indeterminate::after {
   display: block;
-  transform: none !important;
+  transform: none;
 }
 
 .bookkeeping-chart-kind-trend .bookkeeping-panel-body {
@@ -3845,13 +3834,13 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   background: var(--background-modifier-hover);
 }
 
-.bookkeeping-settings .setting-item:not(:has(.setting-item-description:not(:empty))),
-.bookkeeping-modal .setting-item:not(:has(.setting-item-description:not(:empty))) {
+.bookkeeping-settings .setting-item,
+.bookkeeping-modal .setting-item {
   min-height: 52px;
 }
 
-.bookkeeping-settings .setting-item:not(:has(.setting-item-description:not(:empty))) .setting-item-name,
-.bookkeeping-modal .setting-item:not(:has(.setting-item-description:not(:empty))) .setting-item-name {
+.bookkeeping-settings .setting-item .setting-item-name,
+.bookkeeping-modal .setting-item .setting-item-name {
   font-size: var(--font-ui-medium);
   line-height: 1.35;
 }
@@ -3880,7 +3869,7 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
 .bookkeeping-chart-kind-tag .bookkeeping-panel-body,
 .bookkeeping-chart-kind-account .bookkeeping-panel-body,
 .bookkeeping-chart-panel.is-full.bookkeeping-chart-kind-account .bookkeeping-panel-body {
-  padding-inline: 12px !important;
+  padding-inline: 12px;
 }
 
 .bookkeeping-tag-summary-list,
@@ -4018,7 +4007,7 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
 }
 
 .bookkeeping-small-number-input {
-  width: 72px !important;
+  width: 72px;
   min-width: 72px;
   text-align: center;
 }
@@ -4029,7 +4018,7 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
 }
 
 .bookkeeping-shortcut-capture {
-  width: 180px !important;
+  width: 180px;
   cursor: pointer;
   text-align: center;
 }
@@ -4222,14 +4211,14 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-settings.is-mobile .bookkeeping-community-setting-list > .setting-item,
   body.is-mobile .bookkeeping-settings .bookkeeping-website-link-list > .setting-item,
   .bookkeeping-settings.is-mobile .bookkeeping-website-link-list > .setting-item {
-    display: grid !important;
-    min-height: 52px !important;
-    height: auto !important;
+    display: grid;
+    min-height: 52px;
+    height: auto;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center !important;
+    align-items: center;
     gap: 8px 12px;
-    margin: 0 !important;
-    padding: 9px 4px !important;
+    margin: 0;
+    padding: 9px 4px;
   }
 
   body.is-mobile .bookkeeping-settings > .setting-item > .setting-item-info,
@@ -4238,15 +4227,15 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-settings.is-mobile .bookkeeping-community-setting-list > .setting-item > .setting-item-info,
   body.is-mobile .bookkeeping-settings .bookkeeping-website-link-list > .setting-item > .setting-item-info,
   .bookkeeping-settings.is-mobile .bookkeeping-website-link-list > .setting-item > .setting-item-info {
-    display: flex !important;
-    width: auto !important;
+    display: flex;
+    width: auto;
     min-width: 0;
     min-height: 36px;
     flex-direction: column;
     justify-content: center;
-    align-self: center !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    align-self: center;
+    margin: 0;
+    padding: 0;
   }
 
   body.is-mobile .bookkeeping-settings > .setting-item > .setting-item-control,
@@ -4255,17 +4244,17 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-settings.is-mobile .bookkeeping-community-setting-list > .setting-item > .setting-item-control,
   body.is-mobile .bookkeeping-settings .bookkeeping-website-link-list > .setting-item > .setting-item-control,
   .bookkeeping-settings.is-mobile .bookkeeping-website-link-list > .setting-item > .setting-item-control {
-    display: flex !important;
-    width: auto !important;
-    min-width: 0 !important;
+    display: flex;
+    width: auto;
+    min-width: 0;
     max-width: 52vw;
     align-items: center;
     justify-content: flex-end;
-    align-self: center !important;
+    align-self: center;
     justify-self: end;
     gap: 6px;
-    margin: 0 !important;
-    padding: 0 !important;
+    margin: 0;
+    padding: 0;
   }
 
   body.is-mobile .bookkeeping-settings > .setting-item select,
@@ -4278,25 +4267,25 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-settings.is-mobile > .setting-item input[type="date"],
   body.is-mobile .bookkeeping-settings > .setting-item input[type="time"],
   .bookkeeping-settings.is-mobile > .setting-item input[type="time"] {
-    width: min(48vw, 190px) !important;
-    max-width: min(48vw, 190px) !important;
-    min-height: 38px !important;
-    margin: 0 !important;
-    opacity: 1 !important;
-    color: var(--text-normal) !important;
-    border: 1.5px solid color-mix(in srgb, var(--text-muted) 52%, var(--background-modifier-border)) !important;
-    border-radius: var(--input-radius) !important;
-    background: color-mix(in srgb, var(--background-modifier-form-field) 94%, var(--text-normal) 6%) !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 16%, transparent) !important;
-    -webkit-text-fill-color: var(--text-normal) !important;
+    width: min(48vw, 190px);
+    max-width: min(48vw, 190px);
+    min-height: 38px;
+    margin: 0;
+    opacity: 1;
+    color: var(--text-normal);
+    border: 1.5px solid color-mix(in srgb, var(--text-muted) 52%, var(--background-modifier-border));
+    border-radius: var(--input-radius);
+    background: color-mix(in srgb, var(--background-modifier-form-field) 94%, var(--text-normal) 6%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 16%, transparent);
+    -webkit-text-fill-color: var(--text-normal);
   }
 
   body.is-mobile .bookkeeping-settings > .setting-item select:focus,
   .bookkeeping-settings.is-mobile > .setting-item select:focus,
   body.is-mobile .bookkeeping-settings > .setting-item input:focus,
   .bookkeeping-settings.is-mobile > .setting-item input:focus {
-    border-color: var(--interactive-accent) !important;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 24%, transparent) !important;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 24%, transparent);
   }
 
   body.is-mobile .bookkeeping-settings > .setting-item button:not(.checkbox-container),
@@ -4305,10 +4294,10 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-settings.is-mobile .bookkeeping-community-setting-list > .setting-item button,
   body.is-mobile .bookkeeping-settings .bookkeeping-website-link-list > .setting-item button,
   .bookkeeping-settings.is-mobile .bookkeeping-website-link-list > .setting-item button {
-    width: auto !important;
-    min-width: 0 !important;
+    width: auto;
+    min-width: 0;
     max-width: min(48vw, 190px);
-    margin: 0 !important;
+    margin: 0;
   }
 
   .bookkeeping-dashboard.is-mobile .bookkeeping-dashboard-inner {
@@ -4326,15 +4315,15 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   }
 
   .bookkeeping-range-control input {
-    display: block !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    height: var(--input-height) !important;
-    opacity: 1 !important;
-    color: var(--text-normal) !important;
-    border: 1px solid var(--background-modifier-border) !important;
-    background: var(--background-modifier-form-field) !important;
-    -webkit-text-fill-color: var(--text-normal) !important;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: var(--input-height);
+    opacity: 1;
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-modifier-form-field);
+    -webkit-text-fill-color: var(--text-normal);
   }
 
   .bookkeeping-community-qr,
@@ -4370,14 +4359,14 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-settings.is-mobile input[type="date"],
   body.is-mobile .bookkeeping-settings input[type="time"],
   .bookkeeping-settings.is-mobile input[type="time"] {
-    min-height: 38px !important;
-    opacity: 1 !important;
-    color: var(--text-normal) !important;
-    border: 1.5px solid color-mix(in srgb, var(--text-muted) 52%, var(--background-modifier-border)) !important;
-    border-radius: var(--input-radius) !important;
-    background: color-mix(in srgb, var(--background-modifier-form-field) 94%, var(--text-normal) 6%) !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 16%, transparent) !important;
-    -webkit-text-fill-color: var(--text-normal) !important;
+    min-height: 38px;
+    opacity: 1;
+    color: var(--text-normal);
+    border: 1.5px solid color-mix(in srgb, var(--text-muted) 52%, var(--background-modifier-border));
+    border-radius: var(--input-radius);
+    background: color-mix(in srgb, var(--background-modifier-form-field) 94%, var(--text-normal) 6%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 16%, transparent);
+    -webkit-text-fill-color: var(--text-normal);
   }
 
   body.is-mobile .bookkeeping-settings input::placeholder,
@@ -4418,14 +4407,14 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
 
 .bookkeeping-is-pointer-sorting,
 .bookkeeping-is-pointer-sorting * {
-  cursor: grabbing !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .is-pointer-dragging {
   z-index: 20;
-  opacity: 0.62 !important;
+  opacity: 0.62;
   transform: scale(0.985);
   box-shadow: 0 10px 26px color-mix(in srgb, var(--background-modifier-box-shadow) 70%, transparent);
 }
@@ -4473,48 +4462,48 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-settings.is-mobile .setting-item,
   body.is-mobile .bookkeeping-preset-manager-modal .setting-item,
   .bookkeeping-preset-manager-modal.is-mobile .setting-item {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) minmax(112px, min(46vw, 190px)) !important;
-    align-items: center !important;
-    column-gap: 12px !important;
-    row-gap: 4px !important;
-    min-height: 54px !important;
-    margin: 0 !important;
-    padding: 9px 4px !important;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(112px, min(46vw, 190px));
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 4px;
+    min-height: 54px;
+    margin: 0;
+    padding: 9px 4px;
   }
 
   body.is-mobile .bookkeeping-settings .setting-item > .setting-item-info,
   .bookkeeping-settings.is-mobile .setting-item > .setting-item-info,
   body.is-mobile .bookkeeping-preset-manager-modal .setting-item > .setting-item-info,
   .bookkeeping-preset-manager-modal.is-mobile .setting-item > .setting-item-info {
-    display: flex !important;
+    display: flex;
     grid-column: 1;
     grid-row: 1;
-    align-self: center !important;
-    min-width: 0 !important;
+    align-self: center;
+    min-width: 0;
     min-height: 38px;
     box-sizing: border-box;
     flex-direction: column;
-    justify-content: center !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
   }
 
   body.is-mobile .bookkeeping-settings .setting-item > .setting-item-control,
   .bookkeeping-settings.is-mobile .setting-item > .setting-item-control,
   body.is-mobile .bookkeeping-preset-manager-modal .setting-item > .setting-item-control,
   .bookkeeping-preset-manager-modal.is-mobile .setting-item > .setting-item-control {
-    display: flex !important;
+    display: flex;
     grid-column: 2;
     grid-row: 1;
-    width: 100% !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    align-self: center !important;
-    align-items: center !important;
-    justify-content: flex-end !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    align-self: center;
+    align-items: center;
+    justify-content: flex-end;
+    margin: 0;
+    padding: 0;
   }
 
   body.is-mobile .bookkeeping-settings .setting-item-control > select,
@@ -4527,39 +4516,39 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-settings.is-mobile .setting-item-control > input[type="date"],
   body.is-mobile .bookkeeping-settings .setting-item-control > input[type="time"],
   .bookkeeping-settings.is-mobile .setting-item-control > input[type="time"] {
-    display: block !important;
-    width: 100% !important;
-    max-width: none !important;
-    min-width: 0 !important;
-    min-height: 40px !important;
-    box-sizing: border-box !important;
-    opacity: 1 !important;
-    color: var(--text-normal) !important;
-    border: 2px solid var(--background-modifier-border-focus) !important;
-    border-radius: var(--input-radius) !important;
-    background: var(--background-modifier-form-field) !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 18%, transparent) !important;
-    -webkit-text-fill-color: var(--text-normal) !important;
+    display: block;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 40px;
+    box-sizing: border-box;
+    opacity: 1;
+    color: var(--text-normal);
+    border: 2px solid var(--background-modifier-border-focus);
+    border-radius: var(--input-radius);
+    background: var(--background-modifier-form-field);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 18%, transparent);
+    -webkit-text-fill-color: var(--text-normal);
   }
 
   body.is-mobile .bookkeeping-settings .setting-item-control > input[type="color"],
   .bookkeeping-settings.is-mobile .setting-item-control > input[type="color"] {
-    display: block !important;
-    width: 40px !important;
-    max-width: 40px !important;
-    min-width: 40px !important;
-    height: 40px !important;
-    max-height: 40px !important;
-    min-height: 40px !important;
-    flex: 0 0 40px !important;
+    display: block;
+    width: 40px;
+    max-width: 40px;
+    min-width: 40px;
+    height: 40px;
+    max-height: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
     aspect-ratio: 1 / 1;
-    box-sizing: border-box !important;
-    padding: 3px !important;
-    margin: 0 !important;
+    box-sizing: border-box;
+    padding: 3px;
+    margin: 0;
     overflow: hidden;
-    border: 2px solid var(--background-modifier-border-focus) !important;
-    border-radius: 50% !important;
-    background: var(--background-modifier-form-field) !important;
+    border: 2px solid var(--background-modifier-border-focus);
+    border-radius: 50%;
+    background: var(--background-modifier-form-field);
   }
 
   body.is-mobile .bookkeeping-settings .setting-item-control > input[type="color"]::-webkit-color-swatch-wrapper,
@@ -4575,20 +4564,20 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
     border-radius: 50%;
   }
 
-  body.is-mobile .bookkeeping-settings .setting-item-control:has(.checkbox-container),
-  .bookkeeping-settings.is-mobile .setting-item-control:has(.checkbox-container) {
-    width: auto !important;
+  body.is-mobile .bookkeeping-settings .setting-item-control,
+  .bookkeeping-settings.is-mobile .setting-item-control {
+    width: auto;
     justify-self: end;
   }
 
   body.is-mobile .bookkeeping-community-modal .bookkeeping-community-links .setting-item,
   .bookkeeping-community-modal.is-mobile .bookkeeping-community-links .setting-item {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) auto !important;
-    align-items: center !important;
-    gap: 10px !important;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
     min-height: 48px;
-    padding: 6px 2px !important;
+    padding: 6px 2px;
   }
 
   body.is-mobile .bookkeeping-community-modal .bookkeeping-community-links .setting-item-info,
@@ -4596,7 +4585,7 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
     grid-column: 1;
     grid-row: 1;
     min-width: 0;
-    margin: 0 !important;
+    margin: 0;
   }
 
   body.is-mobile .bookkeeping-community-modal .bookkeeping-community-links .setting-item-control,
@@ -4604,7 +4593,7 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
     grid-column: 2;
     grid-row: 1;
     justify-self: end;
-    margin: 0 !important;
+    margin: 0;
   }
 
   .bookkeeping-community-modal .bookkeeping-community-qr,
@@ -4618,37 +4607,37 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   }
 
   .bookkeeping-entry-modal .setting-item {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    align-items: stretch !important;
-    gap: 6px !important;
-    margin: 0 !important;
-    padding: 8px 0 !important;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 0;
   }
 
   .bookkeeping-entry-modal .setting-item-info {
-    display: flex !important;
+    display: flex;
     min-height: 22px;
-    align-items: center !important;
-    margin: 0 !important;
-    padding: 0 2px !important;
+    align-items: center;
+    margin: 0;
+    padding: 0 2px;
   }
 
   .bookkeeping-entry-modal .setting-item-control {
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
   }
 
   .bookkeeping-entry-modal input,
   .bookkeeping-entry-modal select,
   .bookkeeping-entry-modal textarea {
-    width: 100% !important;
+    width: 100%;
     min-height: 42px;
     box-sizing: border-box;
-    border: 2px solid var(--background-modifier-border-focus) !important;
-    background: var(--background-modifier-form-field) !important;
+    border: 2px solid var(--background-modifier-border-focus);
+    background: var(--background-modifier-form-field);
   }
 
   body.is-mobile .bookkeeping-modal input[type="text"],
@@ -4665,13 +4654,13 @@ body:has(.workspace-leaf.mod-active .bookkeeping-dashboard) .status-bar-item.plu
   .bookkeeping-modal.is-mobile input[type="search"],
   .bookkeeping-modal.is-mobile select,
   .bookkeeping-modal.is-mobile textarea {
-    opacity: 1 !important;
-    color: var(--text-normal) !important;
-    border: 2px solid var(--background-modifier-border-focus) !important;
-    border-radius: var(--input-radius) !important;
-    background: var(--background-modifier-form-field) !important;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 18%, transparent) !important;
-    -webkit-text-fill-color: var(--text-normal) !important;
+    opacity: 1;
+    color: var(--text-normal);
+    border: 2px solid var(--background-modifier-border-focus);
+    border-radius: var(--input-radius);
+    background: var(--background-modifier-form-field);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-muted) 18%, transparent);
+    -webkit-text-fill-color: var(--text-normal);
   }
 
   .bookkeeping-plugin-footer-logo,

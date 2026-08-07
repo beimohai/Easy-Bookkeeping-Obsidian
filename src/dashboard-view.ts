@@ -498,7 +498,7 @@ export class DashboardView extends ItemView {
     const y = (value: number): number => paddingTop + (axisMax - value) / span * (height - paddingTop - paddingBottom);
     const x = (index: number): number => paddingLeft + index / Math.max(values.length - 1, 1) * (width - paddingLeft - paddingRight);
     const zeroY = y(baselineValue);
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const svg = createSvg("svg");
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
     svg.setAttribute("class", "bookkeeping-trend-svg");
 
@@ -506,14 +506,14 @@ export class DashboardView extends ItemView {
     for (let index = 0; index < 6; index++) {
       const value = roundMoney(axisMax - step * index);
       const tickY = y(value);
-      const gridLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      const gridLine = svg.createSvg("line");
       gridLine.setAttribute("x1", String(paddingLeft));
       gridLine.setAttribute("x2", String(width - paddingRight));
       gridLine.setAttribute("y1", String(tickY));
       gridLine.setAttribute("y2", String(tickY));
       gridLine.setAttribute("class", "bookkeeping-chart-gridline");
       svg.appendChild(gridLine);
-      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      const label = svg.createSvg("text");
       label.setAttribute("x", String(paddingLeft - 7));
       label.setAttribute("y", String(tickY + 3));
       label.setAttribute("text-anchor", "end");
@@ -521,7 +521,7 @@ export class DashboardView extends ItemView {
       label.textContent = this.formatCompactMoney(value, axisUsesWan);
       svg.appendChild(label);
     }
-    const baseline = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const baseline = svg.createSvg("line");
     baseline.setAttribute("x1", String(paddingLeft));
     baseline.setAttribute("x2", String(width - paddingRight));
     baseline.setAttribute("y1", String(zeroY));
@@ -531,14 +531,14 @@ export class DashboardView extends ItemView {
     if (config.chartType === "bar") {
       const barWidth = Math.max((width - paddingLeft - paddingRight) / values.length * 0.62, 2);
       values.forEach((value, index) => {
-        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        const rect = svg.createSvg("rect");
         const valueY = y(value);
         rect.setAttribute("x", String(x(index) - barWidth / 2));
         rect.setAttribute("y", String(Math.min(valueY, zeroY)));
         rect.setAttribute("width", String(barWidth));
         rect.setAttribute("height", String(Math.max(Math.abs(zeroY - valueY), 1)));
         rect.setAttribute("class", `bookkeeping-chart-bar ${this.trendTone(metric, value)}`);
-        const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        const title = svg.createSvg("title");
         title.textContent = `${this.displayDate(`${this.month}-${String(index + 1).padStart(2, "0")}`)}：${this.money(value)}`;
         rect.appendChild(title);
         svg.appendChild(rect);
@@ -546,22 +546,22 @@ export class DashboardView extends ItemView {
     } else {
       const points = values.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`).join(" ");
       if (config.chartType === "area") {
-        const area = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        const area = svg.createSvg("polygon");
         area.setAttribute("points", `${x(0)},${zeroY} ${points} ${x(values.length - 1)},${zeroY}`);
         area.setAttribute("class", `bookkeeping-trend-area ${this.seriesTone(metric)}`);
         svg.appendChild(area);
       }
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      const line = svg.createSvg("polyline");
       line.setAttribute("points", points);
       line.setAttribute("class", `bookkeeping-trend-line ${this.seriesTone(metric)}`);
       svg.appendChild(line);
       values.forEach((value, index) => {
-        const point = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        const point = svg.createSvg("circle");
         point.setAttribute("cx", String(x(index)));
         point.setAttribute("cy", String(y(value)));
         point.setAttribute("r", "2.4");
         point.setAttribute("class", `bookkeeping-trend-point ${this.trendTone(metric, value)}`);
-        const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+        const title = svg.createSvg("title");
         title.textContent = `${this.displayDate(`${this.month}-${String(index + 1).padStart(2, "0")}`)}：${this.money(value)}`;
         point.appendChild(title);
         svg.appendChild(point);
@@ -1245,15 +1245,17 @@ export class DashboardView extends ItemView {
       for (const item of pending.reverse()) {
         try {
           await this.plugin.store.undoRemove(item);
-        } catch {}
+        } catch {
+          // Best-effort rollback: continue restoring other pending files.
+        }
       }
       throw error;
     }
     this.selectedIds.clear();
     await this.render();
     const notice = this.plugin.notice("", seconds * 1000);
-    notice.noticeEl.empty();
-    const wrapper = notice.noticeEl.createDiv({ cls: "bookkeeping-undo-notice" });
+    notice.messageEl.empty();
+    const wrapper = notice.messageEl.createDiv({ cls: "bookkeeping-undo-notice" });
     wrapper.createSpan({ text: this.plugin.t(`已删除${items.length}笔账目`) });
     const undo = wrapper.createEl("button", { text: this.plugin.t("撤销") });
     let finished = false;
@@ -1658,8 +1660,8 @@ export class DashboardView extends ItemView {
       const pending = await this.plugin.store.stageRemove(item);
       await this.render();
       const notice = this.plugin.notice("", seconds * 1000);
-      notice.noticeEl.empty();
-      const wrapper = notice.noticeEl.createDiv({ cls: "bookkeeping-undo-notice" });
+      notice.messageEl.empty();
+      const wrapper = notice.messageEl.createDiv({ cls: "bookkeeping-undo-notice" });
       wrapper.createSpan({ text: this.plugin.t(`已删除“${item.title}”`) });
       const undo = wrapper.createEl("button", { text: this.plugin.t("撤销") });
       let finished = false;
@@ -2402,7 +2404,7 @@ class OpeningBalanceModal extends Modal {
     this.errorEl = this.contentEl.createDiv({ cls: "bookkeeping-form-error" });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions bookkeeping-balance-actions" });
     if (this.plugin.settings.monthlyOpeningBalances[this.month]) {
-      new ButtonComponent(actions).setButtonText("清除本月校准").setWarning().onClick(async () => {
+      new ButtonComponent(actions).setButtonText("清除本月校准").setDestructive().onClick(async () => {
         delete this.plugin.settings.monthlyOpeningBalances[this.month];
         await this.plugin.saveSettings();
         await this.onSaved();
@@ -2516,7 +2518,7 @@ class ConfirmBatchDeleteModal extends Modal {
     this.contentEl.createEl("p", { text: `确定删除选中的${this.count}笔账目吗？` });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("批量删除").setWarning().onClick(() => {
+    new ButtonComponent(actions).setButtonText("批量删除").setDestructive().onClick(() => {
       this.close();
       this.onConfirm();
     });
@@ -2534,7 +2536,7 @@ class ConfirmDeleteModal extends Modal {
     this.contentEl.createEl("p", { text: `确定删除“${this.transaction.title}”吗？文件将移至系统回收站。` });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("删除").setWarning().onClick(() => {
+    new ButtonComponent(actions).setButtonText("删除").setDestructive().onClick(() => {
       this.close();
       this.confirm();
     });
