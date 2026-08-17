@@ -61,9 +61,9 @@ The production build generates `main.js` in the project root.
    - The desktop mode uses a single-input keyboard workflow for date, account, type, necessity, category, attachment, description, amount, and notes, without requiring a mouse;
    - The mobile mode provides a complete touch-friendly form. The plugin can detect the device automatically or use a manually selected desktop or mobile mode;
    - Continuous entry can be enabled independently on desktop and mobile. Transactions created from the dashboard automatically use the currently displayed month;
-   - Account, type, necessity, category, and attachment fields can each be enabled, hidden, and reordered by dragging;
+   - Date, description, amount, notes, account, type, necessity, category, and attachments follow the configured entry order. Notes can be disabled, while date, description, and amount are always kept;
    - Amounts accept plain numbers and arithmetic expressions such as `11.4+5.1-4`. A transaction is not created when an input contains invalid characters or more than two decimal places;
-   - Desktop entry shortcuts, global shortcuts, and same-day duplicate-description validation are configurable.
+   - Desktop entry shortcuts, same-day duplicate-description validation, numeric-only description validation, empty-amount validation, and attachment drag-and-drop are configurable. Global shortcuts are configured through Obsidian's built-in hotkey settings.
 
 2. **Bookkeeping dashboard and yearly statistics**
    - View monthly income, expenses, net balance, and transaction count. Changing the displayed month also changes the month used for entry;
@@ -99,7 +99,8 @@ The production build generates `main.js` in the project root.
 6. **Accounts, budgets, tags, and attachments**
    - Support multiple accounts, custom account codes and order, transfers, editable monthly opening balances, and automatic carry-over;
    - Set overall and category budgets and view their usage in budget progress charts;
-   - Add or remove tags on individual transactions, or globally rename, delete, and batch-process tags and related transactions;
+   - Add or remove tags on individual transactions, create empty tags, or globally rename, delete, and batch-process tags and related transactions;
+   - Tags can be entered directly in notes: leading `#tag` tokens are parsed as tags, spaces separate multiple tags, and parsed tags are not written to the note. Consecutive spaces count as one separator, while note text itself is preserved. After the first space-separated segment that does not start with `#`, everything after it remains note text, even if it contains more spaces or `#` characters;
    - Drop receipts or invoices into the desktop form or select files on mobile. Attachments are stored automatically in the configured folder and named after the corresponding transaction file;
    - Preview attachments in both Markdown files and the transaction editor, then select a preview to open the original file.
 
@@ -109,19 +110,19 @@ The production build generates `main.js` in the project root.
    - CSV export supports all transactions, the current month, current filtered results, or a custom date range, with configurable filenames and destinations;
    - On desktop, use the operating-system save dialog to export outside the Obsidian vault;
    - Legacy conversion can process a folder inside the vault or import transactions from an external folder while preserving the original files;
-   - Expressions found in legacy notes can be moved into the dedicated expression property, and duplicate transactions are skipped automatically.
+   - Expressions found in legacy notes can be migrated to the current expression-storage mode, and duplicate transactions are skipped automatically.
 
 8. **Local storage and safe operations**
    - Every transaction is stored as an independent Markdown file without requiring Dataview, QuickAdd, or Templater;
-   - Even when account or category entry is disabled, Markdown still stores a default account and `未分类`; the expression property is also always retained;
-   - Expressions can optionally also be written to notes, and existing files can be converted after this setting changes;
+   - Even when account or category entry is disabled, Markdown still stores a default account and `未分类`;
+   - Expressions can optionally be written to notes. When this is disabled, newly saved transactions no longer keep a dedicated expression property, and existing files can be converted after the setting changes;
    - Deletion supports a confirmation dialog and a configurable undo period from 0 to 15 seconds;
    - File changes refresh automatically, and the dashboard can also be rescanned manually;
    - After publication in the community plugin catalog, updates are handled by Obsidian. Manual installations can be updated by downloading the new files again from GitHub Releases or the cloud-drive mirror.
 
 9. **Extensive customization and multiple languages**
-   - Type, necessity, category, and account presets support adding, deleting, renaming, unique custom codes, drag sorting, and default values;
-   - Customize the currency symbol, income and expense colors, number grouping, year-month format, date format, time format, and first day of the week;
+   - Type, necessity, category, and account presets support adding, deleting, renaming, unique custom codes, drag sorting, restoring defaults, and default values;
+   - Customize the currency symbol, resettable income and expense colors, number grouping, year-month format, date format, time format, and first day of the week;
    - Charts, header actions, entry fields, transaction columns, column widths, edit permissions, and shortcuts are configurable;
    - Phone, tablet, and desktop layouts adapt to the available width. Mobile summary cards remain in two columns, while charts switch to one column;
    - Supports Simplified Chinese, Traditional Chinese, English, French, Russian, Spanish, Arabic, Japanese, Korean, German, Portuguese, and Persian;
@@ -142,7 +143,6 @@ Each transaction is stored as an independent Markdown file, for example:
 账户: 默认账户
 内容: 午餐
 金额: 19.19
-算式: "19.19"
 备注: 无
 tags:
   - 记账

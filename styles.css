@@ -11,7 +11,7 @@
   max-width: 960px;
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 22px 28px 40px;
+  padding: 22px 28px 96px;
 }
 
 .bookkeeping-dashboard-header,
@@ -32,6 +32,7 @@
 }
 
 .bookkeeping-dashboard-title,
+.bookkeeping-month-slot,
 .bookkeeping-card-body,
 .bookkeeping-panel-title,
 .bookkeeping-panel-title h3 {
@@ -45,6 +46,7 @@
 }
 
 .bookkeeping-header-actions,
+.bookkeeping-header-action-buttons,
 .bookkeeping-filters,
 .bookkeeping-row-actions {
   display: flex;
@@ -53,6 +55,11 @@
 }
 
 .bookkeeping-header-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.bookkeeping-header-action-buttons {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
@@ -225,7 +232,7 @@
 
 .bookkeeping-chart-panel.is-full .bookkeeping-calendar-day,
 .bookkeeping-chart-panel.is-full .bookkeeping-calendar-empty {
-  height: clamp(48px, 6.5cqi, 72px);
+  height: clamp(54px, 7.2cqi, 82px);
 }
 
 .bookkeeping-chart-panel.is-full .bookkeeping-calendar-date {
@@ -516,11 +523,11 @@
 .bookkeeping-calendar {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 5px;
+  gap: 4px;
 }
 
 .bookkeeping-calendar-weekday {
-  padding-bottom: 3px;
+  padding-bottom: 1px;
   color: var(--text-muted);
   font-size: var(--font-smallest);
   text-align: center;
@@ -529,12 +536,13 @@
 .bookkeeping-calendar-day,
 .bookkeeping-calendar-empty {
   min-width: 0;
-  height: clamp(36px, 8cqi, 50px);
+  height: clamp(38px, 8cqi, 52px);
   border-radius: 6px;
 }
 
 .bookkeeping-calendar-day {
   display: flex;
+  outline: none;
   justify-content: space-between;
   flex-direction: column;
   overflow: hidden;
@@ -563,6 +571,13 @@
 .bookkeeping-calendar-day.is-no-data .bookkeeping-calendar-value {
   color: rgba(255, 255, 255, 0.48);
   text-shadow: none;
+}
+
+.bookkeeping-calendar-day:focus,
+.bookkeeping-calendar-day:focus-visible,
+.bookkeeping-calendar-day:active {
+  outline: none;
+  box-shadow: none;
 }
 
 .bookkeeping-calendar-date {
@@ -601,7 +616,7 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 4px;
   color: var(--text-muted);
   font-size: var(--font-smallest);
 }
@@ -651,6 +666,12 @@
 .bookkeeping-empty-guide-icon svg {
   width: 28px;
   height: 28px;
+}
+
+.bookkeeping-empty-guide-icon img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
 }
 
 .bookkeeping-empty-guide h3 {
@@ -770,8 +791,14 @@
 
 
 .bookkeeping-chart-panel .bookkeeping-panel-body > .bookkeeping-empty:only-child {
+  display: grid;
   width: 100%;
-  min-height: 0;
+  min-height: 265px;
+  place-items: center;
+}
+
+.bookkeeping-chart-panel.is-full .bookkeeping-panel-body > .bookkeeping-empty:only-child {
+  min-height: 330px;
 }
 
 .bookkeeping-table-empty-cell {
@@ -830,6 +857,12 @@
 .bookkeeping-filter-toggle svg {
   width: 15px;
   height: 15px;
+  flex: 0 0 auto;
+}
+
+.bookkeeping-filter-toggle,
+.bookkeeping-floating-back-to-top {
+  line-height: 1;
 }
 
 .bookkeeping-filter-toggle.is-active {
@@ -891,6 +924,21 @@
   gap: 6px;
 }
 
+.bookkeeping-filter-range-separator {
+  display: grid;
+  width: 16px;
+  height: var(--input-height);
+  align-self: end;
+  place-items: center;
+}
+
+.bookkeeping-filter-range-separator::before {
+  width: 12px;
+  height: 1px;
+  background: currentColor;
+  content: "";
+}
+
 .bookkeeping-filter-tag-choices {
   display: flex;
   flex-wrap: wrap;
@@ -922,6 +970,16 @@
   position: relative;
 }
 
+body.is-mobile .bookkeeping-view-container {
+  overflow-y: visible;
+}
+
+.bookkeeping-dashboard.is-mobile {
+  min-height: 100%;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .bookkeeping-floating-back-to-top {
   position: absolute;
   right: 18px;
@@ -929,6 +987,7 @@
   z-index: 8;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   visibility: hidden;
   padding: 7px 11px;
@@ -950,6 +1009,7 @@
 .bookkeeping-floating-back-to-top svg {
   width: 15px;
   height: 15px;
+  flex: 0 0 auto;
 }
 
 .bookkeeping-advanced-filters input,
@@ -995,15 +1055,13 @@
 }
 
 .bookkeeping-table {
-  width: 100%;
-  min-width: 760px;
-  table-layout: auto;
+  table-layout: fixed;
   border: 0;
   border-collapse: collapse;
   font-size: var(--font-ui-small);
 }
 
-.bookkeeping-table [data-column="date"] { width: 1%; min-width: 64px; max-width: 132px; }
+.bookkeeping-table [data-column="date"] { width: 58px; min-width: 58px; max-width: 58px; }
 .bookkeeping-table [data-column="title"] { width: 18%; min-width: 92px; max-width: 168px; }
 .bookkeeping-table [data-column="type"] { width: 1%; min-width: 58px; max-width: 76px; }
 .bookkeeping-table [data-column="necessity"] { width: 1%; min-width: 68px; max-width: 88px; }
@@ -1016,19 +1074,23 @@
 .bookkeeping-table [data-column="actions"] { width: 1%; min-width: 72px; max-width: 90px; }
 
 .bookkeeping-select-column {
-  width: 36px;
-  min-width: 36px;
-  padding-right: 5px;
-  padding-left: 5px;
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  box-sizing: border-box;
+  vertical-align: middle;
+  padding: 8px 0;
+  line-height: 1;
   text-align: center;
 }
 
-.bookkeeping-table tr.is-selected {
+.bookkeeping-table tbody tr.is-selected > td {
   background: var(--bk-accent-soft);
 }
 
 .bookkeeping-table th,
 .bookkeeping-table td {
+  box-sizing: border-box;
   padding: 8px 6px;
   border-width: 0 0 1px;
   border-color: var(--background-modifier-border-hover);
@@ -1051,12 +1113,18 @@
   width: 100%;
   min-width: 0;
   padding: 0;
+  text-align: left;
   color: var(--text-normal);
   box-shadow: none;
   background: transparent;
   font: inherit;
   line-height: 1.15;
   text-align: left;
+}
+
+.bookkeeping-table td[data-column="date"] {
+  padding-right: 3px;
+  padding-left: 0;
 }
 
 .bookkeeping-date-time {
@@ -1080,7 +1148,7 @@
   font-weight: 550;
 }
 
-.bookkeeping-table tbody tr:hover {
+.bookkeeping-table tbody tr:hover > td {
   background: var(--background-modifier-hover);
 }
 
@@ -1321,7 +1389,7 @@
 }
 
 .bookkeeping-entry-modal .setting-item {
-  align-items: flex-start;
+  align-items: center;
 }
 
 .bookkeeping-entry-modal .setting-item-control,
@@ -1329,6 +1397,36 @@
 .bookkeeping-entry-modal select,
 .bookkeeping-entry-modal textarea {
   width: 100%;
+}
+
+.bookkeeping-entry-modal .setting-item-control {
+  justify-content: flex-end;
+}
+
+.bookkeeping-entry-modal .setting-item-control > * {
+  max-width: 300px;
+}
+
+.bookkeeping-entry-modal select,
+.bookkeeping-entry-modal input,
+.bookkeeping-entry-modal textarea,
+.bookkeeping-entry-modal .bookkeeping-attachment-dropzone,
+.bookkeeping-entry-modal .bookkeeping-attachment-list {
+  max-width: 300px;
+}
+
+.bookkeeping-entry-modal .bookkeeping-attachment-dropzone,
+.bookkeeping-entry-modal .bookkeeping-attachment-list {
+  width: 100%;
+  max-width: 300px;
+}
+
+.bookkeeping-entry-modal textarea {
+  min-height: calc(var(--font-text-size) * 2.8 + 16px);
+}
+
+.bookkeeping-entry-modal .is-disabled-field {
+  opacity: 0.58;
 }
 
 .bookkeeping-attachment-list {
@@ -1378,7 +1476,7 @@
 .bookkeeping-attachment-setting .setting-item-control {
   display: grid;
   width: 100%;
-  max-width: 320px;
+  justify-items: end;
 }
 
 .bookkeeping-attachment-dropzone,
@@ -1411,6 +1509,16 @@
   height: 100%;
   opacity: 0;
   cursor: pointer;
+}
+
+.bookkeeping-attachment-dropzone-label {
+  display: -webkit-box;
+  max-height: 2.7em;
+  overflow: hidden;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .bookkeeping-keyboard-attachment-list {
@@ -1484,9 +1592,34 @@
   overflow: auto;
 }
 
+.bookkeeping-tag-manager-add {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) 52px minmax(88px, auto) auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.bookkeeping-tag-manager-add .bookkeeping-tag-prefix {
+  grid-column: 1;
+  justify-self: start;
+}
+
+.bookkeeping-tag-manager-add input {
+  grid-column: 1 / 3;
+  width: 100%;
+  min-width: 0;
+  padding-left: 20px;
+}
+
+.bookkeeping-tag-manager-add button {
+  grid-column: 4;
+  justify-self: center;
+}
+
 .bookkeeping-tag-manager-row {
   display: grid;
-  grid-template-columns: minmax(90px, 1fr) 52px minmax(110px, 1fr) auto auto;
+  grid-template-columns: minmax(90px, 1fr) 52px minmax(88px, auto) auto;
   align-items: center;
   gap: 7px;
   padding: 7px 3px;
@@ -1525,6 +1658,22 @@
 .bookkeeping-tag-manager-name-wrap input {
   width: min(180px, 100%);
   min-width: 64px;
+}
+
+.bookkeeping-tag-rename-button {
+  min-width: 74px;
+  padding-inline: 8px;
+}
+
+.bookkeeping-tag-save-rename {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+}
+
+.bookkeeping-tag-save-rename svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 3;
 }
 
 .bookkeeping-tag-prefix {
@@ -1629,19 +1778,91 @@
 }
 
 .bookkeeping-entry-modal .setting-item-control {
-  max-width: 320px;
+  max-width: 300px;
 }
 
 .bookkeeping-entry-modal textarea {
-  min-height: 72px;
+  min-height: calc(var(--font-text-size) * 2.8 + 16px);
+  height: calc(var(--font-text-size) * 2.8 + 16px);
+  resize: vertical;
 }
 
 .bookkeeping-entry-modal input[type="time"] {
   padding: 0 10px;
   border: 1px solid color-mix(in srgb, var(--interactive-accent) 24%, var(--background-modifier-border));
-  border-radius: 999px;
+  border-radius: var(--input-radius);
   background: color-mix(in srgb, var(--interactive-accent) 6%, var(--background-secondary));
   font-variant-numeric: tabular-nums;
+}
+
+body .bookkeeping-modal.bookkeeping-entry-modal input[type="time"],
+body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"] {
+  position: relative;
+  height: var(--input-height);
+  min-height: var(--input-height);
+  padding: 0 10px 0 38px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--input-radius);
+  background: var(--background-modifier-form-field);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: left;
+}
+
+.bookkeeping-entry-modal .bookkeeping-datetime-setting .setting-item-control {
+  position: relative;
+}
+
+.bookkeeping-entry-modal .bookkeeping-datetime-icon {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 10px;
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  color: var(--text-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.bookkeeping-entry-modal .bookkeeping-datetime-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+body .bookkeeping-modal.bookkeeping-entry-modal input[type="time"]::-webkit-datetime-edit,
+body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-datetime-edit {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+body .bookkeeping-modal.bookkeeping-entry-modal input[type="time"]::-webkit-date-and-time-value,
+body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+body .bookkeeping-modal.bookkeeping-entry-modal input[type="time"]::-webkit-calendar-picker-indicator,
+body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 50%;
+  right: auto;
+  left: 0;
+  width: 36px;
+  height: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  opacity: 0;
+  cursor: pointer;
 }
 
 .bookkeeping-chart-manager {
@@ -1702,6 +1923,7 @@
   margin-top: 8px;
   color: var(--text-error);
   font-size: var(--font-ui-small);
+  white-space: pre-line;
 }
 
 .bookkeeping-modal-actions {
@@ -1861,10 +2083,16 @@
   }
 
   .bookkeeping-entry-modal .setting-item {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: center;
+    flex-direction: initial;
+    column-gap: 10px;
+    min-height: 46px;
   }
 
   .bookkeeping-entry-modal .setting-item-control {
+    min-width: 0;
     max-width: none;
   }
 
@@ -2046,24 +2274,73 @@
   }
 
   .bookkeeping-dashboard.is-phone .bookkeeping-dashboard-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     gap: 9px;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-dashboard-title {
+    grid-column: 1;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-month-slot {
+    grid-column: 2;
+    justify-content: flex-end;
   }
 
   .bookkeeping-dashboard.is-phone .bookkeeping-header-actions {
     display: flex;
+    grid-column: 1 / -1;
     width: 100%;
     align-items: center;
-    justify-content: flex-start;
-    gap: 7px;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 4px;
   }
 
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions > button,
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions > .clickable-icon {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    padding: 8px;
-    flex: 0 0 42px;
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
+    flex: 1 1 auto;
+    justify-items: end;
+    align-content: center;
+    gap: 4px;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary,
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary {
+    flex-direction: row;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary:empty {
+    display: none;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons > button,
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons > .clickable-icon,
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons :is(button, .clickable-icon),
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions > .clickable-icon[aria-label="更多仪表盘操作"] {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 6px;
+    flex: 0 0 34px;
     border-radius: 50%;
   }
 
@@ -2077,6 +2354,11 @@
     padding: 0 8px;
     line-height: 40px;
     text-align: center;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions .clickable-icon[aria-label="更多仪表盘操作"] {
+    order: 0;
+    flex: 0 0 34px;
   }
 
   .bookkeeping-dashboard.is-phone .bookkeeping-month-input::-webkit-datetime-edit,
@@ -2189,17 +2471,22 @@
   }
 
   .bookkeeping-dashboard.is-phone .bookkeeping-filter-pair > div {
-    grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr);
+    align-items: center;
     gap: 4px;
   }
 
-  .bookkeeping-dashboard.is-phone .bookkeeping-range-input-wrap input[type="date"] {
+  .bookkeeping-dashboard.is-phone .bookkeeping-range-input-wrap input {
+    height: var(--input-height);
     font-size: 12px;
+    line-height: var(--input-height);
   }
 
   .bookkeeping-dashboard.is-mobile .bookkeeping-floating-back-to-top {
     right: 16px;
-    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+    min-height: 32px;
+    padding: 5px 10px;
   }
 
 
@@ -2233,7 +2520,16 @@
 
 @media (max-width: 430px) {
   .bookkeeping-dashboard.is-phone .bookkeeping-header-actions {
-    gap: 6px;
+    gap: 4px;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons {
+    gap: 4px;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary,
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
+    gap: 4px;
   }
 
   .bookkeeping-dashboard.is-phone .bookkeeping-month-input {
@@ -2243,12 +2539,15 @@
     font-size: var(--font-ui-small);
   }
 
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions > button,
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions > .clickable-icon {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    flex-basis: 40px;
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons > button,
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons > .clickable-icon,
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons :is(button, .clickable-icon),
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions > .clickable-icon[aria-label="更多仪表盘操作"] {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    padding: 6px;
   }
 
   .bookkeeping-dashboard.is-phone .bookkeeping-filter-clear,
@@ -2733,14 +3032,22 @@
 }
 
 .bookkeeping-preset-finish-row button {
-  grid-column: -2 / -1;
   justify-self: start;
+}
+
+.bookkeeping-preset-finish-row button:first-child {
+  grid-column: 2 / 3;
+}
+
+.bookkeeping-preset-finish-row button:last-child {
+  grid-column: -2 / -1;
 }
 
 .bookkeeping-preset-add-row button,
 .bookkeeping-preset-finish-row button {
-  width: 100%;
-  padding-inline: 5px;
+  width: auto;
+  min-width: 74px;
+  padding-inline: 10px;
 }
 
 .bookkeeping-config-table-header span:last-child {
@@ -2754,7 +3061,7 @@
 .bookkeeping-category-switch .setting-item-control,
 .bookkeeping-preset-manager-modal > .modal-content > .setting-item .setting-item-control {
   min-width: 126px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .bookkeeping-setting-drag {
@@ -2939,14 +3246,14 @@
 .bookkeeping-multi-filter-option input,
 .bookkeeping-cross-month-filter input,
 .bookkeeping-select-column input {
-  width: 16px;
-  min-width: 16px;
-  max-width: 16px;
-  height: 16px;
-  min-height: 16px;
-  max-height: 16px;
+  width: 14px;
+  min-width: 14px;
+  max-width: 14px;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
   box-sizing: border-box;
-  flex: 0 0 16px;
+  flex: 0 0 14px;
   margin: 0;
   aspect-ratio: 1;
 }
@@ -2986,7 +3293,8 @@
 
 .bookkeeping-filter-pair > div {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: end;
+  align-items: center;
+  column-gap: 6px;
 }
 
 .bookkeeping-range-control {
@@ -2999,12 +3307,17 @@
   position: relative;
   display: flex;
   min-width: 0;
+  height: var(--input-height);
   align-items: center;
 }
 
 .bookkeeping-range-input-wrap input {
   width: 100%;
   min-width: 0;
+  height: var(--input-height);
+  min-height: var(--input-height);
+  box-sizing: border-box;
+  line-height: var(--input-height);
   padding-right: 28px;
 }
 
@@ -3019,7 +3332,7 @@
 
 .bookkeeping-range-input-wrap:not(.bookkeeping-money-filter-input) .bookkeeping-range-clear {
   position: absolute;
-  right: 25px;
+  right: 2px;
 }
 
 .bookkeeping-range-clear {
@@ -3027,25 +3340,38 @@
   width: 24px;
   height: 24px;
   padding: 5px;
+  top: 50%;
   background: transparent;
   box-shadow: none;
+  transform: translateY(-50%);
+}
+
+.bookkeeping-filter-pair > div > span {
+  display: flex;
+  min-width: 16px;
+  height: var(--input-height);
+  align-items: center;
+  justify-content: center;
+  line-height: var(--input-height);
 }
 
 .bookkeeping-table .bookkeeping-select-column {
-  width: 40px;
-  min-width: 40px;
+  width: 24px;
+  min-width: 24px;
   box-sizing: border-box;
-  padding-right: 8px;
-  padding-left: 8px;
+  padding-right: 0;
+  padding-left: 0;
 }
 
 .bookkeeping-select-column input {
-  display: block;
-  margin: 0 auto;
+  display: inline-block;
+  margin: 0;
+  vertical-align: middle;
 }
 
 .bookkeeping-table th[data-column="date"] {
-  padding-right: 10px;
+  padding-left: 1px;
+  padding-right: 6px;
 }
 
 .bookkeeping-table-header-content {
@@ -3108,6 +3434,21 @@
 
 .bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full {
   grid-column: auto;
+}
+
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel,
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full {
+  height: auto;
+  min-height: 0;
+}
+
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel .bookkeeping-panel-body,
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full .bookkeeping-panel-body,
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full.bookkeeping-chart-kind-budget .bookkeeping-panel-body,
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full.bookkeeping-chart-kind-account .bookkeeping-panel-body {
+  height: auto;
+  min-height: 0;
+  overflow-y: visible;
 }
 
 .bookkeeping-trend-svg {
@@ -3248,9 +3589,11 @@
 }
 
 .bookkeeping-money-prefix {
+  display: inline-flex;
+  align-items: center;
   height: var(--input-height);
   box-sizing: border-box;
-  padding: 7px 0 0 8px;
+  padding: 0 0 0 8px;
   color: var(--text-muted);
   border: 1px solid var(--background-modifier-border);
   border-right: 0;
@@ -3361,6 +3704,14 @@
   position: sticky;
   z-index: 3;
   left: 0;
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  box-sizing: border-box;
+  padding: 8px 0;
+  line-height: 1;
+  text-align: center;
+  vertical-align: middle;
   background: var(--background-primary);
 }
 
@@ -3370,7 +3721,16 @@
 }
 
 .bookkeeping-table tr.is-selected .bookkeeping-select-column {
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  padding-right: 0;
+  padding-left: 0;
   background: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-primary));
+}
+
+.bookkeeping-table tbody tr.is-selected > .bookkeeping-select-column {
+  background: var(--bk-accent-soft);
 }
 
 .bookkeeping-table tbody tr:hover .bookkeeping-select-column {
@@ -3453,7 +3813,7 @@
 
 .bookkeeping-filter-pair > div {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: end;
+  align-items: center;
 }
 
 .bookkeeping-range-clear {
@@ -3481,7 +3841,7 @@
 .bookkeeping-chart-panel .bookkeeping-calendar-empty,
 .bookkeeping-chart-panel.is-full .bookkeeping-calendar-day,
 .bookkeeping-chart-panel.is-full .bookkeeping-calendar-empty {
-  height: 44px;
+  height: 48px;
 }
 
 .bookkeeping-transactions-heading {
@@ -3490,7 +3850,7 @@
 
 
 .bookkeeping-dashboard-inner {
-  padding: 14px 18px 26px;
+  padding: 14px 18px 96px;
 }
 
 .bookkeeping-summary-cards {
@@ -3558,7 +3918,7 @@
 .bookkeeping-chart-panel .bookkeeping-calendar-empty,
 .bookkeeping-chart-panel.is-full .bookkeeping-calendar-day,
 .bookkeeping-chart-panel.is-full .bookkeeping-calendar-empty {
-  height: 40px;
+  height: 46px;
 }
 
 .bookkeeping-calendar-weeks-4 {
@@ -3617,12 +3977,12 @@
 .bookkeeping-select-column input[type="checkbox"] {
   display: grid;
   place-content: center;
-  width: 16px;
-  min-width: 16px;
-  max-width: 16px;
-  height: 16px;
-  min-height: 16px;
-  max-height: 16px;
+  width: 14px;
+  min-width: 14px;
+  max-width: 14px;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
   padding: 0;
   appearance: none;
   border: 1px solid var(--checkbox-border-color, var(--background-modifier-border-focus));
@@ -3637,7 +3997,7 @@
 .bookkeeping-multi-filter-option input[type="checkbox"]:indeterminate,
 .bookkeeping-select-column input[type="checkbox"]:indeterminate {
   border-color: var(--interactive-accent);
-  background: var(--interactive-accent);
+  background-color: var(--interactive-accent);
 }
 
 .bookkeeping-multi-filter-option input[type="checkbox"]:checked::after,
@@ -3676,16 +4036,19 @@
 }
 
 .bookkeeping-filter-pair > div {
-  align-items: end;
+  align-items: center;
   gap: 5px;
+  column-gap: 6px;
 }
 
 .bookkeeping-filter-pair > div > span {
-  display: grid;
+  display: flex;
+  min-width: 16px;
   height: var(--input-height);
-  place-items: center;
-  align-self: end;
-  line-height: 1;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  line-height: var(--input-height);
 }
 
 .bookkeeping-range-clear,
@@ -3699,17 +4062,36 @@
   width: 24px;
   height: 24px;
   padding: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.bookkeeping-money-prefix,
+.bookkeeping-range-input-wrap,
+.bookkeeping-range-input-wrap input,
+.bookkeeping-filter-pair > div > span {
+  align-self: center;
+}
+
+.bookkeeping-color-reset.is-hidden {
+  display: none;
+}
+
+.bookkeeping-settings .setting-item-description {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .bookkeeping-range-input-wrap:not(.bookkeeping-money-filter-input) input {
-  padding-right: 52px;
+  padding-right: 30px;
 }
 
 .bookkeeping-range-input-wrap:not(.bookkeeping-money-filter-input) input::-webkit-calendar-picker-indicator {
-  margin-right: 22px;
+  margin-right: 0;
 }
 
-.bookkeeping-table [data-column="date"] { min-width: 70px; max-width: 112px; }
+.bookkeeping-table [data-column="date"] { width: 58px; min-width: 58px; max-width: 58px; }
 .bookkeeping-table [data-column="title"] { min-width: 48px; }
 .bookkeeping-table [data-column="type"] { min-width: 54px; }
 .bookkeeping-table [data-column="necessity"] { min-width: 68px; }
@@ -3721,8 +4103,8 @@
 .bookkeeping-table [data-column="attachments"] { min-width: 66px; }
 
 .bookkeeping-table th[data-column="date"] {
-  padding-right: 6px;
-  padding-left: 5px;
+  padding-right: 3px;
+  padding-left: 0;
 }
 
 .bookkeeping-table-header-content {
@@ -3753,7 +4135,7 @@
 
 @media (max-width: 800px) {
   .bookkeeping-dashboard-inner {
-    padding: 10px 9px 22px;
+    padding: 10px 9px 84px;
   }
 }
 
@@ -3767,6 +4149,12 @@
   position: relative;
   display: inline-grid;
   place-items: center;
+  width: 14px;
+  min-width: 14px;
+  max-width: 14px;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
   transform: none;
   background-image: none;
 }
@@ -3783,8 +4171,26 @@
 .bookkeeping-multi-filter-option input[type="checkbox"]:checked::after,
 .bookkeeping-cross-month-filter input[type="checkbox"]:checked::after,
 .bookkeeping-select-column input[type="checkbox"]:checked::after {
-  display: block;
-  transform: translateY(-1px) rotate(45deg);
+  display: none;
+}
+
+.bookkeeping-multi-filter-option input[type="checkbox"]:checked,
+.bookkeeping-cross-month-filter input[type="checkbox"]:checked,
+.bookkeeping-select-column input[type="checkbox"]:checked {
+  background-color: var(--interactive-accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.1 8.3 6.4 11.4 13 4.8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+}
+
+.bookkeeping-multi-filter-option input[type="checkbox"]:indeterminate,
+.bookkeeping-select-column input[type="checkbox"]:indeterminate {
+  background-color: var(--interactive-accent);
+  background-image: linear-gradient(white, white);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 8px 2px;
 }
 
 .bookkeeping-multi-filter-option input[type="checkbox"]:indeterminate::after,
@@ -3794,13 +4200,97 @@
 }
 
 .bookkeeping-chart-kind-trend .bookkeeping-panel-body {
-  padding: 5px 7px 7px;
+  padding: 3px 7px 11px;
   overflow-y: hidden;
 }
 
 .bookkeeping-chart-kind-trend .bookkeeping-trend-svg,
 .bookkeeping-chart-kind-trend.is-full .bookkeeping-trend-svg {
-  height: 260px;
+  height: 252px;
+}
+
+.bookkeeping-chart-kind-trend .bookkeeping-trend-range {
+  margin-top: 3px;
+}
+
+.bookkeeping-chart-kind-calendar .bookkeeping-panel-body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 6px 12px 2px;
+  overflow: hidden;
+}
+
+.bookkeeping-chart-panel.bookkeeping-chart-kind-calendar,
+.bookkeeping-chart-panel.bookkeeping-chart-kind-calendar.is-full {
+  height: 350px;
+  min-height: 350px;
+}
+
+.bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-panel.bookkeeping-chart-kind-calendar,
+.bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-panel.bookkeeping-chart-kind-calendar.is-full {
+  height: 318px;
+  min-height: 318px;
+}
+
+.bookkeeping-chart-kind-calendar .bookkeeping-calendar-day,
+.bookkeeping-chart-kind-calendar .bookkeeping-calendar-empty,
+.bookkeeping-chart-kind-calendar.is-full .bookkeeping-calendar-day,
+.bookkeeping-chart-kind-calendar.is-full .bookkeeping-calendar-empty {
+  height: 44px;
+}
+
+.bookkeeping-chart-kind-calendar .bookkeeping-calendar {
+  align-content: start;
+}
+
+.bookkeeping-chart-kind-calendar .bookkeeping-calendar-weeks-4 {
+  padding-block: 1px;
+}
+
+.bookkeeping-chart-kind-calendar .bookkeeping-calendar-legend {
+  margin-top: 3px;
+}
+
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel,
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full {
+  height: auto;
+  min-height: 0;
+}
+
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel .bookkeeping-panel-body,
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full .bookkeeping-panel-body,
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full.bookkeeping-chart-kind-budget .bookkeeping-panel-body,
+.bookkeeping-dashboard.is-mobile .bookkeeping-chart-panel.is-full.bookkeeping-chart-kind-account .bookkeeping-panel-body {
+  height: auto;
+  min-height: 0;
+  overflow-y: visible;
+}
+
+.bookkeeping-dashboard.is-mobile .bookkeeping-annual-bars,
+.bookkeeping-dashboard.is-mobile .bookkeeping-pie-legend,
+.bookkeeping-dashboard.is-mobile .bookkeeping-tag-summary-list {
+  max-height: none;
+  overflow-y: visible;
+}
+
+body.is-mobile .bookkeeping-select-column,
+.bookkeeping-dashboard.is-mobile .bookkeeping-select-column {
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+  padding-right: 0;
+  padding-left: 0;
+  opacity: 1;
+  color: transparent;
+  font-size: 0;
+}
+
+body.is-mobile .bookkeeping-select-column input,
+.bookkeeping-dashboard.is-mobile .bookkeeping-select-column input {
+  color: initial;
+  font-size: initial;
 }
 
 .bookkeeping-tag-summary-row .bookkeeping-bar-label,
@@ -3837,6 +4327,10 @@
 .bookkeeping-settings .setting-item,
 .bookkeeping-modal .setting-item {
   min-height: 52px;
+}
+
+.bookkeeping-entry-modal .setting-item {
+  min-height: 46px;
 }
 
 .bookkeeping-settings .setting-item .setting-item-name,
@@ -4306,7 +4800,7 @@
 
   body.is-mobile .bookkeeping-view-container .bookkeeping-floating-back-to-top {
     right: 16px;
-    bottom: calc(164px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(54px + env(safe-area-inset-bottom, 0px));
   }
 
   .bookkeeping-filter-pair > div {
@@ -4532,6 +5026,8 @@
 
   body.is-mobile .bookkeeping-settings .setting-item-control > input[type="color"],
   .bookkeeping-settings.is-mobile .setting-item-control > input[type="color"] {
+    appearance: none;
+    -webkit-appearance: none;
     display: block;
     width: 40px;
     max-width: 40px;
@@ -4542,7 +5038,7 @@
     flex: 0 0 40px;
     aspect-ratio: 1 / 1;
     box-sizing: border-box;
-    padding: 3px;
+    padding: 0;
     margin: 0;
     overflow: hidden;
     border: 2px solid var(--background-modifier-border-focus);
@@ -4553,12 +5049,16 @@
   body.is-mobile .bookkeeping-settings .setting-item-control > input[type="color"]::-webkit-color-swatch-wrapper,
   .bookkeeping-settings.is-mobile .setting-item-control > input[type="color"]::-webkit-color-swatch-wrapper {
     padding: 0;
+    border: 0;
+    border-radius: 50%;
   }
 
   body.is-mobile .bookkeeping-settings .setting-item-control > input[type="color"]::-webkit-color-swatch,
   .bookkeeping-settings.is-mobile .setting-item-control > input[type="color"]::-webkit-color-swatch,
   body.is-mobile .bookkeeping-settings .setting-item-control > input[type="color"]::-moz-color-swatch,
   .bookkeeping-settings.is-mobile .setting-item-control > input[type="color"]::-moz-color-swatch {
+    width: 100%;
+    height: 100%;
     border: 0;
     border-radius: 50%;
   }
@@ -4607,36 +5107,53 @@
 
   .bookkeeping-entry-modal .setting-item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    align-items: stretch;
-    gap: 6px;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 4px;
+    min-height: 46px;
     margin: 0;
-    padding: 8px 0;
+    padding: 7px 0;
   }
 
   .bookkeeping-entry-modal .setting-item-info {
     display: flex;
+    grid-column: 1;
     min-height: 22px;
     align-items: center;
+    justify-content: flex-start;
     margin: 0;
-    padding: 0 2px;
+    padding: 0;
   }
 
   .bookkeeping-entry-modal .setting-item-control {
+    grid-column: 2;
     width: 100%;
     max-width: none;
     margin: 0;
     padding: 0;
+    justify-content: stretch;
   }
 
   .bookkeeping-entry-modal input,
   .bookkeeping-entry-modal select,
   .bookkeeping-entry-modal textarea {
     width: 100%;
+    max-width: none;
     min-height: 42px;
     box-sizing: border-box;
     border: 2px solid var(--background-modifier-border-focus);
     background: var(--background-modifier-form-field);
+  }
+
+  .bookkeeping-entry-modal .setting-item-control > * {
+    width: 100%;
+    max-width: none;
+  }
+
+  .bookkeeping-entry-modal textarea {
+    min-height: calc(var(--font-text-size) * 2.8 + 16px);
+    height: calc(var(--font-text-size) * 2.8 + 16px);
   }
 
   body.is-mobile .bookkeeping-modal input[type="text"],
@@ -4666,5 +5183,297 @@
   .bookkeeping-plugin-footer img {
     width: 154px;
     height: 154px;
+  }
+}
+
+/* Final layout guards for the compact dashboard and entry modal surfaces. */
+.bookkeeping-table-wrapper .bookkeeping-table {
+  table-layout: fixed;
+}
+
+.bookkeeping-table-wrapper .bookkeeping-table .bookkeeping-select-column,
+.bookkeeping-table-wrapper .bookkeeping-table col.bookkeeping-select-column-col {
+  width: 24px;
+  min-width: 24px;
+  max-width: 24px;
+}
+
+.bookkeeping-table-wrapper .bookkeeping-table .bookkeeping-select-column {
+  box-sizing: border-box;
+  padding-right: 0;
+  padding-left: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.bookkeeping-table-wrapper .bookkeeping-select-column input[type="checkbox"] {
+  display: block;
+  margin: 0 auto;
+}
+
+.bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-panel.bookkeeping-chart-kind-calendar,
+.bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-panel.bookkeeping-chart-kind-calendar.is-full {
+  height: auto;
+  min-height: 0;
+}
+
+.bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-calendar .bookkeeping-panel-body {
+  grid-template-rows: auto minmax(0, 1fr);
+  padding-bottom: 0;
+}
+
+.bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-calendar .bookkeeping-calendar-legend {
+  width: 100%;
+  align-self: center;
+  margin-top: 0;
+}
+
+.bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-calendar .bookkeeping-calendar-day,
+.bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-calendar .bookkeeping-calendar-empty {
+  height: 44px;
+}
+
+@media (max-width: 700px) {
+  .bookkeeping-dashboard.is-phone .bookkeeping-dashboard-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions {
+    display: block;
+    grid-column: 1 / -1;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons {
+    display: grid;
+    width: 100%;
+    gap: 6px;
+    justify-items: stretch;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary,
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, 34px);
+    justify-content: end;
+    gap: 6px;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
+    flex-direction: initial;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons :is(button, .clickable-icon),
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-actions > .clickable-icon[aria-label="更多仪表盘操作"] {
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 6px;
+    justify-self: end;
+  }
+
+  .bookkeeping-dashboard.is-phone .bookkeeping-month-input {
+    width: 128px;
+    min-width: 128px;
+    max-width: 128px;
+    height: 38px;
+    line-height: 36px;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal {
+    width: min(460px, calc(100vw - 18px));
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .modal-content {
+    padding-inline: 12px;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .modal-content > .setting-item {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: center;
+    gap: 0 10px;
+    min-height: 46px;
+    box-sizing: border-box;
+    padding: 6px 0;
+    border-top: 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .modal-content > .setting-item > .setting-item-info {
+    display: flex;
+    min-width: 0;
+    min-height: 34px;
+    align-items: center;
+    align-self: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .setting-item-name {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .modal-content > .setting-item > .setting-item-control {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+    max-width: none;
+    align-items: center;
+    align-self: center;
+    margin: 0;
+    padding: 0;
+    justify-content: stretch;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .setting-item-control > *,
+  body.is-mobile .bookkeeping-entry-modal input,
+  body.is-mobile .bookkeeping-entry-modal select,
+  body.is-mobile .bookkeeping-entry-modal textarea,
+  body.is-mobile .bookkeeping-entry-modal .bookkeeping-attachment-dropzone,
+  body.is-mobile .bookkeeping-entry-modal .bookkeeping-attachment-list {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    box-sizing: border-box;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .setting-item-control input,
+  body.is-mobile .bookkeeping-entry-modal .setting-item-control select {
+    height: 34px;
+    min-height: 34px;
+    max-height: 34px;
+    padding-block: 4px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-small);
+    line-height: 1.2;
+    box-shadow: none;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .setting-item-control textarea {
+    height: calc(var(--font-text-size) * 2.7 + 14px);
+    min-height: calc(var(--font-text-size) * 2.7 + 14px);
+    padding-block: 7px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 10px;
+    line-height: 1.35;
+    box-shadow: none;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .modal-content > .setting-item.bookkeeping-hidden {
+    display: none;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .bookkeeping-attachment-dropzone {
+    min-height: 64px;
+    padding: 10px;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .bookkeeping-modal-actions {
+    gap: 8px;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .bookkeeping-modal-actions button {
+    flex: 1 1 0;
+  }
+}
+
+.bookkeeping-table-fill-column-col {
+  width: auto;
+}
+
+.bookkeeping-table .bookkeeping-table-fill-cell {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  padding: 0;
+}
+
+.bookkeeping-table-wrapper .bookkeeping-table tbody tr:hover > td {
+  background: var(--background-modifier-hover);
+}
+
+.bookkeeping-table-wrapper .bookkeeping-table tbody tr.is-selected > td,
+.bookkeeping-table-wrapper .bookkeeping-table tbody tr.is-selected:hover > td {
+  background: var(--bk-accent-soft);
+}
+
+.bookkeeping-filter-pair > div > .bookkeeping-filter-range-separator {
+  align-self: end;
+}
+
+/* Keep editor controls and paired desktop charts on shared visual baselines. */
+.bookkeeping-entry-modal .bookkeeping-attachment-setting .setting-item-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: stretch;
+}
+
+.bookkeeping-entry-modal .bookkeeping-attachment-setting .bookkeeping-attachment-dropzone,
+.bookkeeping-entry-modal .bookkeeping-attachment-setting .bookkeeping-attachment-list {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body .bookkeeping-modal.bookkeeping-entry-modal :is(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--text-muted) 62%, transparent);
+  opacity: 1;
+  -webkit-text-fill-color: color-mix(in srgb, var(--text-muted) 62%, transparent);
+}
+
+body:not(.is-ios):not(.is-android) .bookkeeping-modal.bookkeeping-entry-modal input[type="time"],
+body:not(.is-ios):not(.is-android) .bookkeeping-modal.bookkeeping-entry-modal input[type="date"] {
+  padding-inline-start: 38px;
+  padding-inline-end: 10px;
+}
+
+@media (max-width: 700px) {
+  body.is-mobile .bookkeeping-entry-modal .bookkeeping-datetime-setting .bookkeeping-datetime-icon {
+    width: 16px;
+    min-width: 16px;
+    max-width: 16px;
+    height: 16px;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal .modal-content > .bookkeeping-attachment-setting > .setting-item-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: stretch;
+  }
+}
+
+@media (min-width: 701px) {
+  .bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-trend .bookkeeping-panel-body {
+    display: grid;
+    grid-template-rows: 242px 18px minmax(0, 1fr);
+    padding-bottom: 0;
+  }
+
+  .bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-trend .bookkeeping-trend-svg,
+  .bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-trend.is-full .bookkeeping-trend-svg {
+    height: 242px;
+  }
+
+  .bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-trend .bookkeeping-trend-range {
+    align-self: center;
+    margin-top: 0;
+  }
+
+  .bookkeeping-dashboard:not(.is-mobile) .bookkeeping-chart-kind-calendar .bookkeeping-calendar-legend {
+    box-sizing: border-box;
+    align-items: center;
+    padding-inline: 0;
   }
 }

@@ -1,8 +1,8 @@
 import { App, ButtonComponent, Modal, Platform, PluginSettingTab, Setting, TFolder, normalizePath, setIcon } from "obsidian";
 import type { SettingDefinitionItem } from "obsidian";
 import type BookkeepingPlugin from "./main";
-import type { Language, Necessity, OptionField, TableColumn, TransactionType, TypeEffect } from "./types";
-import { DEFAULT_SETTINGS, OPTION_FIELD_LABELS, TABLE_COLUMN_LABELS } from "./types";
+import type { EntryField, Language, Necessity, TableColumn, TransactionType, TypeEffect } from "./types";
+import { DEFAULT_SETTINGS, ENTRY_FIELD_LABELS, TABLE_COLUMN_LABELS } from "./types";
 import qqGroupUrl from "./assets/community/qq-group.jpg";
 import sponsorQrUrl from "./assets/community/support.png";
 import { BILIBILI_URL, ISSUES_URL, PROJECT_URL, RELEASES_URL } from "./branding";
@@ -32,7 +32,7 @@ function necessityOrder(values: string[]): Necessity[] { return values; }
 
 
 export class BookkeepingSettingTab extends PluginSettingTab {
-  private draggedOption: OptionField | null = null;
+  private draggedOption: EntryField | null = null;
   private draggedColumn: TableColumn | null = null;
 
   constructor(app: App, private readonly plugin: BookkeepingPlugin) {
@@ -66,7 +66,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
       })(); }));
     new Setting(containerEl).setName("语言包管理").addButton((button) => button
       .setButtonText("管理语言包").setIcon("languages").onClick(() => new LanguagePackModal(this.app, this.plugin, () => this.update()).open()));
-    new Setting(containerEl).setName("退出后是否保持页面").addDropdown((dropdown) => dropdown
+    new Setting(containerEl).setName("退出后是否保存界面").addDropdown((dropdown) => dropdown
       .addOptions({ none: "不保持", current: "保持当前筛选", monthly: "保持当月界面" })
       .setValue(this.plugin.settings.filterPersistence).onChange((value) => { void (async () => {
         this.plugin.settings.filterPersistence = value === "current" ? "current" : value === "monthly" ? "monthly" : "none";
@@ -85,14 +85,8 @@ export class BookkeepingSettingTab extends PluginSettingTab {
         this.plugin.settings.showFloatingBackToTop = value;
         await this.plugin.saveSettingsQuietly();
       })(); }));
-    new Setting(containerEl).setName("收入颜色").addColorPicker((picker) => picker.setValue(this.plugin.settings.incomeColor).onChange((value) => { void (async () => {
-      this.plugin.settings.incomeColor = value;
-      await this.plugin.saveSettings();
-    })(); }));
-    new Setting(containerEl).setName("支出颜色").addColorPicker((picker) => picker.setValue(this.plugin.settings.expenseColor).onChange((value) => { void (async () => {
-      this.plugin.settings.expenseColor = value;
-      await this.plugin.saveSettings();
-    })(); }));
+    this.colorSetting(containerEl, "收入颜色", "incomeColor");
+    this.colorSetting(containerEl, "支出颜色", "expenseColor");
     this.renderCommunityEntries(containerEl);
 
     this.section("录入");
@@ -117,6 +111,16 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("允许内容重复").setDesc("关闭后，新建或修改账目时不允许与同日账目使用相同内容。").addToggle((toggle) => toggle
       .setValue(this.plugin.settings.allowDuplicateContent).onChange((value) => { void (async () => {
         this.plugin.settings.allowDuplicateContent = value;
+        await this.plugin.saveSettingsQuietly();
+      })(); }));
+    new Setting(containerEl).setName("允许内容为纯数字").setDesc("关闭后，新建或修改账目时内容不允许使用纯数字。").addToggle((toggle) => toggle
+      .setValue(this.plugin.settings.allowNumericTitle).onChange((value) => { void (async () => {
+        this.plugin.settings.allowNumericTitle = value;
+        await this.plugin.saveSettingsQuietly();
+      })(); }));
+    new Setting(containerEl).setName("允许金额为空").setDesc("开启后，若金额留空则按0保存。").addToggle((toggle) => toggle
+      .setValue(this.plugin.settings.allowEmptyAmount).onChange((value) => { void (async () => {
+        this.plugin.settings.allowEmptyAmount = value;
         await this.plugin.saveSettingsQuietly();
       })(); }));
 
@@ -250,15 +254,6 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     this.shortcutSetting("下一个选项", "next");
     this.shortcutSetting("返回上一步", "back");
     this.shortcutSetting("关闭", "close");
-    this.heading("全局快捷键");
-    new Setting(containerEl).setName("启用全局快捷键").addToggle((toggle) => toggle.setValue(this.plugin.settings.globalShortcuts.enabled).onChange((value) => { void (async () => {
-      this.plugin.settings.globalShortcuts.enabled = value; await this.plugin.saveSettingsQuietly();
-    })(); }));
-    this.globalShortcutSetting("打开仪表盘", "openDashboard");
-    this.globalShortcutSetting("开始记账", "addTransaction");
-    this.globalShortcutSetting("导入CSV文件", "importCsv");
-    this.globalShortcutSetting("导出CSV文件", "exportCsv");
-    this.globalShortcutSetting("刷新仪表盘", "refreshDashboard");
     this.renderWebsiteLinks(containerEl, true);
     this.renderPluginFooter(containerEl);
     this.plugin.applyLanguage(containerEl);
@@ -270,6 +265,33 @@ export class BookkeepingSettingTab extends PluginSettingTab {
 
   private heading(title: string): void {
     new Setting(this.containerEl).setName(title).setHeading();
+  }
+
+  private colorSetting(parent: HTMLElement, name: string, key: "incomeColor" | "expenseColor"): void {
+    const defaultValue = DEFAULT_SETTINGS[key];
+    let resetButton: ButtonComponent | null = null;
+    let currentPicker: { setValue: (value: string) => unknown } | null = null;
+    const updateReset = (): void => resetButton?.buttonEl.toggleClass("is-hidden", this.plugin.settings[key] === defaultValue);
+    new Setting(parent).setName(name)
+      .addColorPicker((picker) => {
+        currentPicker = picker;
+        picker.setValue(this.plugin.settings[key]).onChange((value) => { void (async () => {
+          this.plugin.settings[key] = value;
+          updateReset();
+          await this.plugin.saveSettings();
+        })(); });
+      })
+      .addButton((button) => {
+        resetButton = button;
+        button.setIcon("rotate-ccw").setTooltip("重置").setButtonText("还原默认").onClick(() => { void (async () => {
+          this.plugin.settings[key] = defaultValue;
+          currentPicker?.setValue(defaultValue);
+          updateReset();
+          await this.plugin.saveSettings();
+        })(); });
+        button.buttonEl.addClass("bookkeeping-color-reset");
+        updateReset();
+      });
   }
 
   private renderCommunityEntries(parent: HTMLElement, footer = false): void {
@@ -294,7 +316,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     details.createEl("a", { text: "Easy Bookkeeping", attr: { href: PROJECT_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: "作者：北漠海", attr: { href: BILIBILI_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: `版本号：${this.plugin.manifest.version}`, attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
-    details.createEl("a", { text: "更新日期：2026-08-07", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
+    details.createEl("a", { text: "更新日期：2026-08-17", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
     footer.createDiv({ text: "本项目基于 MIT License 开源", cls: "bookkeeping-plugin-footer-license" });
   }
 
@@ -317,30 +339,35 @@ export class BookkeepingSettingTab extends PluginSettingTab {
       row.dataset.optionField = field;
       const grip = row.createSpan({ cls: "bookkeeping-setting-drag", attr: { title: "拖动排序" } });
       setIcon(grip, "grip-vertical"); grip.draggable = true;
-      row.createSpan({ text: OPTION_FIELD_LABELS[field], cls: "bookkeeping-setting-order-name" });
+      row.createSpan({ text: ENTRY_FIELD_LABELS[field], cls: "bookkeeping-setting-order-name" });
       const isEnabled = (): boolean => field === "account" ? this.plugin.settings.enableAccount
         : field === "category" ? this.plugin.settings.enableCategory
         : field === "type" ? this.plugin.settings.enableType
         : field === "necessity" ? this.plugin.settings.enableNecessity
-        : this.plugin.settings.enableEntryAttachments;
-      const eye = row.createEl("button", { cls: "clickable-icon bookkeeping-field-eye", attr: { type: "button", "aria-label": `${isEnabled() ? "关闭" : "启用"}${OPTION_FIELD_LABELS[field]}` } });
-      const renderEye = (): void => {
-        setIcon(eye, isEnabled() ? "eye" : "eye-off");
-        eye.setAttribute("aria-label", `${isEnabled() ? "关闭" : "启用"}${OPTION_FIELD_LABELS[field]}`);
-        eye.toggleClass("is-active", isEnabled());
-      };
-      renderEye();
-      eye.addEventListener("click", () => { void (async () => {
-        const next = !isEnabled();
-        if (field === "account") this.plugin.settings.enableAccount = next;
-        else if (field === "category") this.plugin.settings.enableCategory = next;
-        else if (field === "type") this.plugin.settings.enableType = next;
-        else if (field === "necessity") this.plugin.settings.enableNecessity = next;
-        else this.plugin.settings.enableEntryAttachments = next;
-        if (next && !this.plugin.settings.visibleTableColumns.includes(field)) this.plugin.settings.visibleTableColumns.push(field);
+        : field === "attachments" ? this.plugin.settings.enableEntryAttachments
+        : field === "note" ? this.plugin.settings.enableNote
+        : true;
+      const canToggle = field === "account" || field === "category" || field === "type" || field === "necessity" || field === "attachments" || field === "note";
+      if (canToggle) {
+        const eye = row.createEl("button", { cls: "clickable-icon bookkeeping-field-eye", attr: { type: "button", "aria-label": `${isEnabled() ? "关闭" : "启用"}${ENTRY_FIELD_LABELS[field]}` } });
+        const renderEye = (): void => {
+          setIcon(eye, isEnabled() ? "eye" : "eye-off");
+          eye.setAttribute("aria-label", `${isEnabled() ? "关闭" : "启用"}${ENTRY_FIELD_LABELS[field]}`);
+          eye.toggleClass("is-active", isEnabled());
+        };
         renderEye();
-        await this.plugin.saveSettingsQuietly();
-      })(); });
+        eye.addEventListener("click", () => { void (async () => {
+          const next = !isEnabled();
+          if (field === "account") this.plugin.settings.enableAccount = next;
+          else if (field === "category") this.plugin.settings.enableCategory = next;
+          else if (field === "type") this.plugin.settings.enableType = next;
+          else if (field === "necessity") this.plugin.settings.enableNecessity = next;
+          else if (field === "attachments") this.plugin.settings.enableEntryAttachments = next;
+          else this.plugin.settings.enableNote = next;
+          renderEye();
+          await this.plugin.saveSettingsQuietly();
+        })(); });
+      } else row.createSpan({ cls: "bookkeeping-field-required" });
       grip.addEventListener("dragstart", () => { this.draggedOption = field; row.addClass("is-dragging"); });
       grip.addEventListener("dragend", () => { this.draggedOption = null; row.removeClass("is-dragging"); });
       row.addEventListener("dragover", (event) => event.preventDefault());
@@ -358,7 +385,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
         onCommit: async () => {
           this.plugin.settings.optionFieldOrder = Array.from(parent.querySelectorAll<HTMLElement>(".bookkeeping-setting-order-row"))
             .map((element) => element.dataset.optionField)
-            .filter((value): value is OptionField => Boolean(value));
+            .filter((value): value is EntryField => Boolean(value));
           await this.plugin.saveSettingsQuietly();
           this.renderEntryFields(parent);
         }
@@ -452,13 +479,6 @@ export class BookkeepingSettingTab extends PluginSettingTab {
   private shortcutSetting(name: string, key: keyof typeof this.plugin.settings.keyboardShortcuts): void {
     this.shortcutCaptureSetting(name, this.plugin.settings.keyboardShortcuts[key], false, DEFAULT_SETTINGS.keyboardShortcuts[key], key === "close", async (value) => {
       this.plugin.settings.keyboardShortcuts[key] = value || DEFAULT_SETTINGS.keyboardShortcuts[key];
-      await this.plugin.saveSettingsQuietly();
-    });
-  }
-
-  private globalShortcutSetting(name: string, key: Exclude<keyof typeof this.plugin.settings.globalShortcuts, "enabled">): void {
-    this.shortcutCaptureSetting(name, this.plugin.settings.globalShortcuts[key], true, "", false, async (value) => {
-      this.plugin.settings.globalShortcuts[key] = value;
       await this.plugin.saveSettingsQuietly();
     });
   }
@@ -656,6 +676,7 @@ class PresetManagerModal extends Modal {
     else this.renderAccountRows(list);
     this.renderAddRow();
     const actions = this.contentEl.createDiv({ cls: `bookkeeping-preset-finish-row${this.group === "type" ? " has-effect" : ""}` });
+    new ButtonComponent(actions).setButtonText("恢复默认").onClick(() => void this.resetPresetGroup());
     new ButtonComponent(actions).setButtonText("完成").setCta().onClick(() => this.close());
     window.requestAnimationFrame(() => this.contentEl.scrollTop = scroll);
   }
@@ -677,6 +698,36 @@ class PresetManagerModal extends Modal {
     } else new Setting(this.contentEl).setName("默认录入值").addDropdown((dropdown) => dropdown.addOptions(optionRecord(this.plugin.settings.accounts.map((account) => account.name))).setValue(this.plugin.settings.defaultAccount).onChange((value) => { void (async () => {
       this.plugin.settings.defaultAccount = value; await this.plugin.saveSettingsQuietly();
     })(); }));
+  }
+
+  private async resetPresetGroup(): Promise<void> {
+    if (this.group === "type") {
+      this.plugin.settings.typeOrder = [...DEFAULT_SETTINGS.typeOrder];
+      this.plugin.settings.typeLabels = { ...DEFAULT_SETTINGS.typeLabels };
+      this.plugin.settings.typeCodes = { ...DEFAULT_SETTINGS.typeCodes };
+      this.plugin.settings.typeEffects = { ...DEFAULT_SETTINGS.typeEffects };
+      this.plugin.settings.defaultType = DEFAULT_SETTINGS.defaultType;
+    } else if (this.group === "necessity") {
+      this.plugin.settings.necessityOrder = [...DEFAULT_SETTINGS.necessityOrder];
+      this.plugin.settings.necessityLabels = { ...DEFAULT_SETTINGS.necessityLabels };
+      this.plugin.settings.necessityCodes = { ...DEFAULT_SETTINGS.necessityCodes };
+      this.plugin.settings.defaultNecessity = DEFAULT_SETTINGS.defaultNecessity;
+    } else if (this.group === "category") {
+      if (this.categoryIncome) {
+        this.plugin.settings.incomeCategories = [...DEFAULT_SETTINGS.incomeCategories];
+        this.plugin.settings.incomeCategoryCodes = { ...DEFAULT_SETTINGS.incomeCategoryCodes };
+        this.plugin.settings.defaultIncomeCategory = DEFAULT_SETTINGS.defaultIncomeCategory;
+      } else {
+        this.plugin.settings.categories = [...DEFAULT_SETTINGS.categories];
+        this.plugin.settings.categoryCodes = { ...DEFAULT_SETTINGS.categoryCodes };
+        this.plugin.settings.defaultCategory = DEFAULT_SETTINGS.defaultCategory;
+      }
+    } else {
+      this.plugin.settings.accounts = DEFAULT_SETTINGS.accounts.map((account) => ({ ...account }));
+      this.plugin.settings.defaultAccount = DEFAULT_SETTINGS.defaultAccount;
+    }
+    await this.plugin.saveSettingsQuietly();
+    this.render();
   }
 
   private renderTypeRows(list: HTMLElement): void {

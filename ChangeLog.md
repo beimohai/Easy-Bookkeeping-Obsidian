@@ -1,5 +1,35 @@
 # 更新日志 Changelog
 
+* [V2.0.6](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.6) 2026-08-17
+  * 录入与编辑体验
+    * 录入字段排序扩展到日期、内容、金额、备注和附件，附件默认排在备注后，编辑面板按同一顺序展示并一次显示多个错误。
+    * 新增纯数字内容和金额留空开关，优化桌面连续记账、附件和编辑面板提示文案与注释。
+    * 未启用分类时默认使用 `未分类` 和编号 `0`，标签表头默认隐藏。
+  * 仪表盘、标签与设置
+    * 顶部默认把导出和导入 CSV 收入三点菜单，首页空态使用插件 Logo，图表空状态居中，底部留白避免返回顶部按钮遮挡。
+    * 修复选择账目时列宽重置，选中和悬停时改为整行高亮，并收紧选择列和日期列；优化范围筛选分隔线及桌面趋势图与日历的底部对齐。
+    * 统一电脑和手机端编辑面板的时间、日期字号、左对齐文字及左侧图标；隐藏无效的转入账户行，并将附件框扩展到输入栏宽度、提示限制为最多两行。
+    * 拉开已输入文字和未输入占位文字的明暗差异，并使日历收支图例与首末日期框边缘对齐。
+    * 标签汇总点击后只应用筛选、不自动展开筛选栏；标签批量管理支持新建标签、取消重命名和更醒目的保存勾选提示。
+    * 全局快捷键并入 Obsidian 自带快捷键，开始记账默认 `Cmd/Ctrl+Shift+N`，收入/支出颜色和四类录入预设支持恢复默认。
+  * 文档与存储
+    * README 补充备注中 `#标签` 的解析规则，并说明关闭“把算式写入备注”后不再专门保留算式字段。
+    * 更新插件市场简介、版本号、Release notes 和版本兼容表。
+  * Entry and editing experience
+    * Entry-field ordering now includes date, description, amount, notes, and attachments, with attachments defaulting after notes. The editor uses the same order and can show multiple validation errors.
+    * Added numeric-only description and empty-amount toggles, and refined desktop continuous-entry, attachment, editor placeholder, and setting description text.
+    * Disabled categories now default to `未分类` with code `0`, and the tag column is hidden by default.
+  * Dashboard, tags, and settings
+    * Export and CSV import are collapsed into the three-dot menu by default, the first-transaction empty state uses the plugin logo, chart empty states are centered, and dashboard bottom spacing avoids the floating back-to-top button.
+    * Fixed column-width resets when selecting transactions, extended selected and hover highlighting across the full row, tightened the selection/date columns, and aligned range separators plus the desktop trend/calendar baselines.
+    * Unified time/date sizing, left-aligned text, and leading icons across desktop and mobile editors; hid the irrelevant target-account row, matched attachment drop zones to input widths, and limited attachment hints to two lines.
+    * Increased contrast between entered values and empty placeholders, and aligned the calendar legend edges with the first and last date cells.
+    * Clicking tag summaries now applies the filter without opening the filter panel. Tag management supports creating tags, canceling rename mode, and a more visible save checkmark.
+    * Global shortcuts now use Obsidian hotkeys, Start bookkeeping defaults to `Cmd/Ctrl+Shift+N`, and income/expense colors plus all four preset panels can be restored to defaults.
+  * Documentation and storage
+    * README now documents note `#tag` parsing and explains that disabling “write expressions to notes” stops keeping a dedicated expression property for newly saved transactions.
+    * Updated the marketplace description, version files, release notes, and compatibility map.
+
 * [V2.0.5](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.5) 2026-08-07
   * 审核 Warning 修复
     * 移除不必要的 TypeScript 断言，保留旧版连续记账配置迁移逻辑。

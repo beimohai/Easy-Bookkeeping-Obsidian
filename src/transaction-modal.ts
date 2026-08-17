@@ -1,6 +1,6 @@
 import { App, ButtonComponent, DropdownComponent, Modal, Notice, Setting, TFile, TextComponent, setIcon } from "obsidian";
 import type { BookkeepingSettings, Transaction, TransactionDraft, TransactionType } from "./types";
-import { currentTime, errorMessageZh, evaluateAmount, formatMoney, normalizeDate, today, uniqueStrings } from "./utils";
+import { currentTime, errorMessageZh, evaluateAmount, formatMoney, normalizeDate, parseNoteTags, today, uniqueStrings } from "./utils";
 import type { TransactionStore } from "./transaction-store";
 import { translate } from "./locales";
 
@@ -29,12 +29,11 @@ export class TransactionModal extends Modal {
     const content = this.contentEl;
     content.empty();
 
-    new Setting(content).setName("日期").addText((text) => {
-      text.inputEl.type = "date";
-      text.inputEl.lang = this.settings.language;
-      text.setValue(this.draft.date).onChange((value) => this.draft.date = value);
-    });
-    new Setting(content).setName("时间").addText((text) => {
+    const timeSetting = new Setting(content).setName("时间");
+    timeSetting.settingEl.addClass("bookkeeping-datetime-setting");
+    const timeIcon = timeSetting.controlEl.createSpan({ cls: "bookkeeping-datetime-icon", attr: { "aria-hidden": "true" } });
+    setIcon(timeIcon, "clock");
+    timeSetting.addText((text) => {
       text.inputEl.type = "time";
       text.inputEl.lang = this.settings.language;
       text.setValue(this.draft.time).onChange((value) => this.draft.time = value);
@@ -44,12 +43,26 @@ export class TransactionModal extends Modal {
     const optionSettings = new Map<string, Setting>();
     let refresh = (): void => {};
     const accounts = Object.fromEntries(this.settings.accounts.map((account) => [account.name, account.name]));
+    let titleInput: TextComponent | null = null;
+    let amountInput: TextComponent | null = null;
+    let noteInput: HTMLTextAreaElement | null = null;
+    let tagInput: TextComponent | null = null;
     for (const field of this.settings.optionFieldOrder) {
-      if (field === "account" && this.settings.enableAccount) {
+      if (field === "date") {
+        const dateSetting = new Setting(content).setName("日期");
+        dateSetting.settingEl.addClass("bookkeeping-datetime-setting");
+        const dateIcon = dateSetting.controlEl.createSpan({ cls: "bookkeeping-datetime-icon", attr: { "aria-hidden": "true" } });
+        setIcon(dateIcon, "calendar-days");
+        dateSetting.addText((text) => {
+          text.inputEl.type = "date";
+          text.inputEl.lang = this.settings.language;
+          text.setPlaceholder("请输入日期").setValue(this.draft.date).onChange((value) => this.draft.date = value);
+        });
+      } else if (field === "account") {
         const setting = new Setting(content).setName("账户");
         setting.addDropdown((dropdown) => dropdown.addOptions(accounts).setValue(this.draft.account).onChange((value) => this.draft.account = value));
         optionSettings.set(field, setting);
-      } else if (field === "type" && this.settings.enableType) {
+      } else if (field === "type") {
         const setting = new Setting(content).setName("类型");
         const availableTypes = this.settings.typeOrder.filter((type) => this.settings.enableAccount || type !== "转账");
         const typeOptions = Object.fromEntries(availableTypes.map((type) => [type, this.settings.typeLabels[type] ?? type]));
@@ -61,14 +74,14 @@ export class TransactionModal extends Modal {
             refresh();
           }));
         optionSettings.set(field, setting);
-      } else if (field === "necessity" && this.settings.enableNecessity) {
+      } else if (field === "necessity") {
         const setting = new Setting(content).setName("必要性");
         setting.addDropdown((dropdown) => dropdown
           .addOptions(Object.fromEntries(this.settings.necessityOrder.map((value) => [value, this.settings.necessityLabels[value] ?? value])))
           .setValue(this.draft.necessity)
           .onChange((value) => this.draft.necessity = value));
         optionSettings.set(field, setting);
-      } else if (field === "category" && this.settings.enableCategory) {
+      } else if (field === "category") {
         const setting = new Setting(content).setName("分类");
         setting.addDropdown((dropdown) => {
           categoryDropdown = dropdown;
@@ -76,8 +89,34 @@ export class TransactionModal extends Modal {
           dropdown.onChange((value) => this.draft.category = value);
         });
         optionSettings.set(field, setting);
-      } else if (field === "attachments" && this.settings.enableEntryAttachments) {
+      } else if (field === "attachments") {
         this.renderAttachmentUploader(content);
+      } else if (field === "title") {
+        new Setting(content).setName("内容").addText((text) => {
+          titleInput = text.setPlaceholder(this.settings.allowNumericTitle ? "请输入账目内容" : "请输入账目内容（不能为纯数字）").setValue(this.draft.title);
+          text.onChange((value) => this.draft.title = value.trim());
+        });
+      } else if (field === "amount") {
+        const amountSetting = new Setting(content).setName("金额");
+        amountSetting.addText((text) => {
+          amountInput = text.setPlaceholder("请输入金额或算式").setValue(this.draft.expression || (this.draft.amount ? String(this.draft.amount) : ""));
+          text.inputEl.inputMode = "decimal";
+          text.onChange((value) => this.draft.expression = value);
+        });
+      } else if (field === "note") {
+        const noteSetting = new Setting(content).setName("备注");
+        noteSetting.addTextArea((text) => {
+          noteInput = text.inputEl;
+          noteInput.rows = 2;
+          text.setPlaceholder("请输入备注，可以留空").setValue(this.draft.note === "无" ? "" : this.draft.note);
+          text.onChange((value) => {
+            const parsed = parseNoteTags(value);
+            this.draft.note = parsed.note;
+            this.draft.tags = parsed.tags;
+            tagInput?.setValue(this.formatTags());
+          });
+        });
+        tagInput = this.renderTagInput(content);
       }
     }
 
@@ -100,28 +139,6 @@ export class TransactionModal extends Modal {
     refresh = refreshTypeFields.bind(this);
     refresh();
 
-    let titleInput: TextComponent;
-    new Setting(content).setName("内容").addText((text) => {
-      titleInput = text.setPlaceholder("请输入内容").setValue(this.draft.title);
-      text.onChange((value) => this.draft.title = value.trim());
-    });
-
-    let amountInput: TextComponent;
-    const amountSetting = new Setting(content).setName("金额");
-    amountSetting.addText((text) => {
-      amountInput = text.setPlaceholder("0.00").setValue(this.draft.expression || (this.draft.amount ? String(this.draft.amount) : ""));
-      text.inputEl.inputMode = "decimal";
-      text.onChange((value) => this.draft.expression = value);
-    });
-
-    new Setting(content).setName("备注").addTextArea((text) => {
-      text.setPlaceholder("可留空").setValue(this.draft.note === "无" ? "" : this.draft.note);
-      text.onChange((value) => this.draft.note = value.trim());
-    });
-    new Setting(content).setName("标签").addText((text) => {
-      text.setValue(this.draft.tags.filter((tag) => tag !== "记账").join(" "));
-      text.onChange((value) => this.draft.tags = uniqueStrings(value.split(/[\s,，]+/).map((tag) => tag.replace(/^#/, ""))));
-    });
     this.errorEl = content.createDiv({ cls: "bookkeeping-form-error" });
     const actions = content.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
@@ -139,9 +156,11 @@ export class TransactionModal extends Modal {
             this.draft.tags = [];
             this.draft.attachments = [];
             this.pendingAttachments = [];
-            titleInput.setValue("");
-            amountInput.setValue("");
-            titleInput.inputEl.focus();
+            titleInput?.setValue("");
+            amountInput?.setValue("");
+            if (noteInput) noteInput.value = "";
+            tagInput?.setValue("");
+            titleInput?.inputEl.focus();
           } else {
             this.close();
           }
@@ -150,7 +169,7 @@ export class TransactionModal extends Modal {
         }
       })(); });
 
-    window.setTimeout(() => titleInput.inputEl.focus(), 50);
+    window.setTimeout(() => titleInput?.inputEl.focus(), 50);
   }
 
   onClose(): void {
@@ -162,16 +181,28 @@ export class TransactionModal extends Modal {
   private async submit(): Promise<void> {
     this.errorEl.empty();
     const date = normalizeDate(this.draft.date);
-    if (!date) throw new Error("请选择真实存在的有效日期");
-    this.draft.date = date;
+    const errors: string[] = [];
+    if (!date) errors.push("请选择真实存在的有效日期");
+    else this.draft.date = date;
     const time = this.draft.time.match(/^(\d{2}):(\d{2})$/);
-    if (!time || Number(time[1]) > 23 || Number(time[2]) > 59) throw new Error("请选择有效时间");
-    if (!this.draft.title || /^\d+$/.test(this.draft.title)) throw new Error("内容不能为空或纯数字");
-    if (this.settings.enableAccount && !this.draft.account) throw new Error("请选择账户");
+    if (!time || Number(time[1]) > 23 || Number(time[2]) > 59) errors.push("请选择有效时间");
+    if (!this.draft.title) errors.push("内容不得为空");
+    if (!this.settings.allowNumericTitle && /^\d+$/.test(this.draft.title)) errors.push("内容不能为纯数字");
+    if (this.settings.enableAccount && !this.draft.account) errors.push("请选择账户");
     if (this.draft.type === "转账" && (!this.draft.targetAccount || this.draft.targetAccount === this.draft.account)) {
-      throw new Error("转出账户和转入账户不能相同");
+      errors.push("转出账户和转入账户不能相同");
     }
-    this.draft.amount = evaluateAmount(this.draft.expression);
+    if (!this.draft.expression.trim() && this.settings.allowEmptyAmount) {
+      this.draft.amount = 0;
+    } else if (!this.draft.expression.trim()) errors.push("金额不得为空");
+    else {
+      try {
+        this.draft.amount = evaluateAmount(this.draft.expression);
+      } catch {
+        errors.push("金额或算式无效");
+      }
+    }
+    if (errors.length) throw new Error(errors.join("\n"));
     for (const file of this.pendingAttachments) {
       const stored = await this.store.saveAttachment(file, this.draft);
       this.draft.attachments = [...new Set([...this.draft.attachments, stored.path])];
@@ -200,8 +231,9 @@ export class TransactionModal extends Modal {
   private renderAttachmentUploader(content: HTMLElement): void {
     const setting = new Setting(content).setName("附件");
     setting.settingEl.addClass("bookkeeping-attachment-setting");
-    const area = setting.controlEl.createDiv({ cls: "bookkeeping-attachment-dropzone", text: "拖动文件到这里，或点击选择" });
-    const input = area.createEl("input", { type: "file", attr: { multiple: "true", "aria-label": "选择小票或发票附件" } });
+    const area = setting.controlEl.createDiv({ cls: "bookkeeping-attachment-dropzone" });
+    area.createSpan({ cls: "bookkeeping-attachment-dropzone-label", text: "拖动文件到此处，或点击选择文件" });
+    const input = area.createEl("input", { type: "file", attr: { multiple: "true", "aria-label": "选择附件" } });
     const list = setting.controlEl.createDiv({ cls: "bookkeeping-attachment-list" });
     const addFiles = (files: FileList | File[]): void => {
       const incoming = Array.from(files);
@@ -271,6 +303,20 @@ export class TransactionModal extends Modal {
     }
     card.createSpan({ cls: "bookkeeping-attachment-preview-name", text: name });
     if (onOpen) card.addEventListener("click", onOpen);
+  }
+
+  private renderTagInput(content: HTMLElement): TextComponent | null {
+    let input: TextComponent | null = null;
+    new Setting(content).setName("标签").addText((text) => {
+      input = text;
+      text.setPlaceholder("#标签1 #标签2").setValue(this.formatTags());
+      text.onChange((value) => this.draft.tags = uniqueStrings(value.split(/[\s,，]+/).map((tag) => tag.replace(/^#/, ""))));
+    });
+    return input;
+  }
+
+  private formatTags(): string {
+    return this.draft.tags.filter((tag) => tag !== "记账").map((tag) => `#${tag}`).join(" ");
   }
 
   private emptyDraft(): TransactionDraft {

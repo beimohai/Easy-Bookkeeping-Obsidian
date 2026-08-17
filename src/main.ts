@@ -4,7 +4,7 @@ import { KeyboardEntryModal } from "./keyboard-entry-modal";
 import { BookkeepingSettingTab } from "./settings-tab";
 import { TransactionModal } from "./transaction-modal";
 import { TransactionStore } from "./transaction-store";
-import { DEFAULT_SETTINGS, type AnnualChartConfig, type AnnualChartMetric, type BookkeepingSettings, type CalendarWeekStart, type ChartKind, type ChartMetric, type DashboardChartConfig, type HeaderAction, type OptionField, type TableColumn, type Transaction, type TransactionType } from "./types";
+import { DEFAULT_SETTINGS, type AnnualChartConfig, type AnnualChartMetric, type BookkeepingSettings, type CalendarWeekStart, type ChartKind, type ChartMetric, type DashboardChartConfig, type EntryField, type HeaderAction, type TableColumn, type Transaction, type TransactionType } from "./types";
 import { currentMonth, errorMessageZh, formatMoney } from "./utils";
 import logoUrl from "./assets/branding/logo.png";
 import { I18nController, translate } from "./locales";
@@ -65,7 +65,6 @@ export default class BookkeepingPlugin extends Plugin {
 
     this.registerView(DASHBOARD_VIEW_TYPE, (leaf) => new DashboardView(leaf, this));
     this.ribbonIconEl = this.addRibbonIcon("wallet", this.t("打开记账仪表盘"), () => void this.openDashboard());
-    this.ribbonIconEl.addClass("easy-bookkeeping-ribbon-action");
     this.app.workspace.onLayoutReady(() => this.restoreRibbonPosition());
     this.registerDomEvent(document, "pointerup", (event) => {
       const parent = this.ribbonIconEl?.parentElement;
@@ -74,21 +73,20 @@ export default class BookkeepingPlugin extends Plugin {
       window.clearTimeout(this.ribbonCaptureTimer);
       this.ribbonCaptureTimer = window.setTimeout(() => this.captureRibbonPosition(), 0);
     });
-    this.addCommand({ id: "open-dashboard", name: this.t("打开记账仪表盘"), callback: () => void this.openDashboard() });
-    this.addCommand({ id: "add-transaction", name: this.t("开始记账（使用默认界面）"), callback: () => this.openEntry(false) });
-    this.addCommand({ id: "keyboard-entry", name: this.t("桌面版全键盘连续记账"), callback: () => this.openKeyboardEntry() });
-    this.addCommand({ id: "mobile-entry", name: this.t("手机端表单记账"), callback: () => this.openMobileEntry(false) });
+    this.addCommand({ id: "open-dashboard", name: this.t("Easy Bookkeeping：打开仪表盘"), callback: () => void this.openDashboard() });
+    this.addCommand({ id: "add-transaction", name: this.t("Easy Bookkeeping：开始记账"), hotkeys: [{ modifiers: ["Mod", "Shift"], key: "N" }], callback: () => this.openEntry(false) });
+    this.addCommand({ id: "keyboard-entry", name: this.t("Easy Bookkeeping：桌面版全键盘连续记账"), callback: () => this.openKeyboardEntry() });
+    this.addCommand({ id: "mobile-entry", name: this.t("Easy Bookkeeping：手机端表单记账"), callback: () => this.openMobileEntry(false) });
     this.addCommand({ id: "convert-legacy-files", name: this.t("转换旧版账目为新版Properties"), callback: () => this.openLegacyConverter() });
-    this.addCommand({ id: "import-csv", name: this.t("从CSV导入账目"), callback: () => this.openCsvImporter() });
-    this.addCommand({ id: "manage-tags", name: this.t("批量管理标签"), callback: () => this.openTagManager() });
-    this.addCommand({ id: "period-statistics", name: this.t("查看年度统计"), callback: () => this.openPeriodStats(currentMonth()) });
+    this.addCommand({ id: "import-csv", name: this.t("Easy Bookkeeping：导入CSV文件"), callback: () => this.openCsvImporter() });
+    this.addCommand({ id: "manage-tags", name: this.t("Easy Bookkeeping：标签批量管理"), callback: () => this.openTagManager() });
+    this.addCommand({ id: "period-statistics", name: this.t("Easy Bookkeeping：查看年度统计"), callback: () => this.openPeriodStats(currentMonth()) });
     this.addCommand({
       id: "export-csv",
-      name: this.t("导出CSV文件"),
+      name: this.t("Easy Bookkeeping：导出CSV文件"),
       callback: () => this.openCsvExporter()
     });
     this.addSettingTab(new BookkeepingSettingTab(this.app, this));
-    this.registerDomEvent(document, "keydown", (event) => this.handleGlobalShortcut(event));
 
     this.registerObsidianProtocolHandler("easy-bookkeeping", async (params) => {
       const type = params.type === "income" ? "收入" : params.type === "transfer" ? "转账" : "支出";
@@ -234,6 +232,18 @@ export default class BookkeepingPlugin extends Plugin {
     }
   }
 
+  async restartPlugin(): Promise<void> {
+    const plugins = (this.app as App & { plugins?: { disablePlugin?: (id: string) => Promise<void>; enablePlugin?: (id: string) => Promise<void> } }).plugins;
+    if (!plugins?.disablePlugin || !plugins.enablePlugin) {
+      await this.refreshDashboards();
+      this.notice("仪表盘已刷新");
+      return;
+    }
+    const id = this.manifest.id;
+    await plugins.disablePlugin(id);
+    await plugins.enablePlugin(id);
+  }
+
   openLegacyConverter(): void {
     new LegacyConverterModal(this.app, this).open();
   }
@@ -323,7 +333,6 @@ export default class BookkeepingPlugin extends Plugin {
         ? loaded.annualChartConfigs.map((chart) => ({ ...chart }))
         : DEFAULT_SETTINGS.annualChartConfigs.map((chart) => ({ ...chart })),
       keyboardShortcuts: { ...DEFAULT_SETTINGS.keyboardShortcuts, ...(loaded?.keyboardShortcuts ?? {}) },
-      globalShortcuts: { ...DEFAULT_SETTINGS.globalShortcuts, ...(loaded?.globalShortcuts ?? {}) },
       collapsedHeaderActions: loaded?.collapsedHeaderActions ?? [...DEFAULT_SETTINGS.collapsedHeaderActions],
       headerActionOrder: this.completeOrder(loaded?.headerActionOrder, DEFAULT_SETTINGS.headerActionOrder),
       calendarWeekStart: (["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as CalendarWeekStart[]).includes(loaded?.calendarWeekStart as CalendarWeekStart)
@@ -333,16 +342,17 @@ export default class BookkeepingPlugin extends Plugin {
       incomeColor: isHexColor(loaded?.incomeColor) ? loaded.incomeColor : DEFAULT_SETTINGS.incomeColor,
       expenseColor: isHexColor(loaded?.expenseColor) ? loaded.expenseColor : DEFAULT_SETTINGS.expenseColor,
       yearMonthDisplayFormat: loaded?.yearMonthDisplayFormat ?? DEFAULT_SETTINGS.yearMonthDisplayFormat,
-      filterPersistence: loaded?.filterPersistence === "current" || loaded?.filterPersistence === "monthly"
+      filterPersistence: loaded?.filterPersistence === "current" || loaded?.filterPersistence === "monthly" || loaded?.filterPersistence === "none"
         ? loaded.filterPersistence
-        : loaded?.saveFiltersOnExit ? "current" : "none",
+        : loaded?.saveFiltersOnExit === false ? "none" : "current",
       saveFiltersOnExit: loaded?.filterPersistence
         ? loaded.filterPersistence !== "none"
-        : Boolean(loaded?.saveFiltersOnExit),
+        : loaded?.saveFiltersOnExit ?? true,
       lastDashboardMonth: isMonthString(loaded?.lastDashboardMonth) ? loaded.lastDashboardMonth : "",
       savedDashboardAdvancedFilters: Boolean(loaded?.savedDashboardAdvancedFilters),
       savedMonthlyDashboardAdvancedFilters: { ...(loaded?.savedMonthlyDashboardAdvancedFilters ?? {}) },
       disabledLanguages: [...new Set((loaded?.disabledLanguages ?? []).filter((language): language is BookkeepingSettings["language"] => toSettingsLanguage(language) !== null && language !== "zh-CN"))],
+      customTags: [...new Set((loaded?.customTags ?? []).map((tag) => String(tag).replace(/^#/, "").trim()).filter(Boolean))],
       ribbonPosition: Number.isInteger(loaded?.ribbonPosition) && Number(loaded?.ribbonPosition) >= 0 ? Number(loaded?.ribbonPosition) : -1,
       typeLabels: { ...DEFAULT_SETTINGS.typeLabels, ...(loaded?.typeLabels ?? {}) },
       necessityLabels: { ...DEFAULT_SETTINGS.necessityLabels, ...(loaded?.necessityLabels ?? {}) },
@@ -437,8 +447,10 @@ export default class BookkeepingPlugin extends Plugin {
     return migrated.length ? migrated : DEFAULT_SETTINGS.chartConfigs.map((chart) => ({ ...chart }));
   }
 
-  private completeOrder<T extends OptionField | TableColumn | HeaderAction>(loaded: T[] | undefined, defaults: T[]): T[] {
-    const valid = (loaded ?? []).filter((item) => defaults.includes(item));
+  private completeOrder<T extends EntryField | TableColumn | HeaderAction>(loaded: unknown, defaults: T[]): T[] {
+    const valid = Array.isArray(loaded)
+      ? loaded.filter((item): item is T => defaults.includes(item as T))
+      : [];
     return [...new Set([...valid, ...defaults])];
   }
 
@@ -447,36 +459,6 @@ export default class BookkeepingPlugin extends Plugin {
     this.refreshTimer = window.setTimeout(() => void this.refreshDashboards(), 300);
   }
 
-  private handleGlobalShortcut(event: KeyboardEvent): void {
-    if (!this.settings.globalShortcuts.enabled || event.repeat) return;
-    const target = event.target as HTMLElement | null;
-    if (target?.matches("input, textarea, select, [contenteditable='true']") && !(event.ctrlKey || event.metaKey || event.altKey)) return;
-    const shortcuts = this.settings.globalShortcuts;
-    const actions: Array<[string, () => void]> = [
-      [shortcuts.openDashboard, () => void this.openDashboard()],
-      [shortcuts.addTransaction, () => this.openEntry(false)],
-      [shortcuts.importCsv, () => this.openCsvImporter()],
-      [shortcuts.exportCsv, () => this.openCsvExporter()],
-      [shortcuts.refreshDashboard, () => void this.refreshDashboards()]
-    ];
-    const match = actions.find(([shortcut]) => shortcut && this.matchesShortcut(event, shortcut));
-    if (!match) return;
-    event.preventDefault();
-    event.stopPropagation();
-    match[1]();
-  }
-
-  private matchesShortcut(event: KeyboardEvent, shortcut: string): boolean {
-    const parts = shortcut.split("+").map((part) => part.trim().toLocaleLowerCase()).filter(Boolean);
-    const key = parts.find((part) => !["ctrl", "control", "cmd", "command", "meta", "alt", "option", "shift"].includes(part));
-    if (!key) return false;
-    const wantsCtrl = parts.includes("ctrl") || parts.includes("control");
-    const wantsMeta = parts.includes("cmd") || parts.includes("command") || parts.includes("meta");
-    const wantsAlt = parts.includes("alt") || parts.includes("option");
-    const wantsShift = parts.includes("shift");
-    return event.ctrlKey === wantsCtrl && event.metaKey === wantsMeta && event.altKey === wantsAlt && event.shiftKey === wantsShift
-      && event.key.toLocaleLowerCase() === key;
-  }
 }
 
 class LegacyConverterModal extends Modal {
@@ -596,8 +578,8 @@ class ExpressionStorageMigrationModal extends Modal {
     this.modalEl.addClass("bookkeeping-modal");
     this.setTitle("同步现有账目的算式格式？");
     this.contentEl.createEl("p", { text: this.plugin.settings.saveExpressionInNote
-      ? "设置已经启用。是否把现有账目的算式同步写入备注？算式Properties仍会保留。"
-      : "设置已经关闭。是否从现有账目的备注中移除自动写入的算式行？算式Properties仍会保留。" });
+      ? "设置已经启用。是否把现有账目的算式同步写入备注？"
+      : "设置已经关闭。是否从现有账目的备注中移除自动写入的算式行，并移除专门的算式属性？" });
     this.contentEl.createEl("p", { text: "选择“以后再说”只影响新建或再次编辑的账目。", cls: "setting-item-description" });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("以后再说").onClick(() => this.close());
@@ -809,25 +791,30 @@ class TagManagerModal extends Modal {
     const transactions = await this.plugin.store.list();
     const counts = new Map<string, number>();
     for (const item of transactions) for (const tag of item.tags) if (tag !== "记账") counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    if (!counts.size) {
-      this.contentEl.createEl("p", { text: "尚无可管理的附加标签。" });
-      new ButtonComponent(this.contentEl).setButtonText("关闭").onClick(() => this.close());
-      return;
-    }
+    for (const tag of this.plugin.settings.customTags) if (!counts.has(tag)) counts.set(tag, 0);
     const list = this.contentEl.createDiv({ cls: "bookkeeping-tag-manager-list" });
+    if (!counts.size) list.createDiv({ cls: "bookkeeping-empty", text: "尚无可管理的附加标签" });
     for (const [tag, count] of [...counts].sort((a, b) => b[1] - a[1])) {
       const row = list.createDiv({ cls: `bookkeeping-tag-manager-row${tag === this.focusTag ? " is-focused" : ""}` });
       const nameWrap = row.createDiv({ cls: "bookkeeping-tag-manager-name-wrap" });
       nameWrap.createSpan({ text: `#${tag}`, cls: "bookkeeping-tag-manager-name bookkeeping-user-text" });
       row.createSpan({ text: String(count), cls: "bookkeeping-tag-manager-count" }).createSpan({ text: "笔" });
-      new ButtonComponent(row).setButtonText("重命名").onClick(() => {
+      const renameButton = new ButtonComponent(row).setButtonText("重命名");
+      renameButton.buttonEl.addClass("bookkeeping-tag-rename-button");
+      renameButton.onClick(() => {
+        if (renameButton.buttonEl.hasClass("mod-warning")) return void this.renderTags();
+        renameButton.setButtonText("取消重命名").setWarning();
         nameWrap.empty();
         nameWrap.createSpan({ text: "#", cls: "bookkeeping-tag-prefix" });
         const input = nameWrap.createEl("input", { type: "text", value: tag, attr: { "aria-label": `重命名${tag}` } });
         input.focus(); input.select();
-        const save = nameWrap.createEl("button", { cls: "clickable-icon", attr: { type: "button", "aria-label": "保存重命名" } });
+        const save = nameWrap.createEl("button", { cls: "clickable-icon bookkeeping-tag-save-rename", attr: { type: "button", "aria-label": "保存重命名" } });
         setIcon(save, "check");
-        const submit = (): void => { const next = input.value.replace(/^#/, "").trim(); if (next && next !== tag) void this.runTagAction(tag, next); };
+        const submit = (): void => {
+          const next = input.value.replace(/^#/, "").trim();
+          if (!next || next === tag) return void this.renderTags();
+          void this.runTagAction(tag, next);
+        };
         save.addEventListener("click", submit);
         input.addEventListener("keydown", (event) => { if (event.key === "Enter") submit(); else if (event.key === "Escape") void this.renderTags(); });
       });
@@ -837,6 +824,22 @@ class TagManagerModal extends Modal {
           () => void this.runDeleteTransactions(tag)).open();
       });
     }
+    const addRow = this.contentEl.createDiv({ cls: "bookkeeping-tag-manager-add" });
+    addRow.createSpan({ text: "#", cls: "bookkeeping-tag-prefix" });
+    const addInput = addRow.createEl("input", { type: "text", attr: { placeholder: "新建标签", "aria-label": "新建标签" } });
+    const addButton = new ButtonComponent(addRow).setButtonText("新建标签").setIcon("plus").onClick(() => void this.createCustomTag(addInput.value));
+    addInput.addEventListener("keydown", (event) => { if (event.key === "Enter") void this.createCustomTag(addInput.value); });
+    addButton.buttonEl.disabled = false;
+  }
+
+  private async createCustomTag(value: string): Promise<void> {
+    const tag = value.replace(/^#/, "").trim();
+    if (!tag || tag === "记账") return;
+    if (!this.plugin.settings.customTags.includes(tag)) {
+      this.plugin.settings.customTags = [...this.plugin.settings.customTags, tag].sort((a, b) => a.localeCompare(b, "zh-CN"));
+      await this.plugin.saveSettingsQuietly();
+    }
+    await this.renderTags();
   }
 
   private async runTagAction(oldTag: string, newTag: string | null): Promise<void> {
@@ -849,7 +852,14 @@ class TagManagerModal extends Modal {
       fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
     });
     await this.plugin.refreshDashboards();
-    status.setText(newTag ? `已把#${oldTag}重命名为#${newTag}，影响${count}笔账目。` : `已从${count}笔账目删除#${oldTag}。`);
+    if (newTag) {
+      this.plugin.settings.customTags = [...new Set(this.plugin.settings.customTags.map((tag) => tag === oldTag ? newTag : tag))];
+      await this.plugin.saveSettingsQuietly();
+    } else if (count === 0) {
+      this.plugin.settings.customTags = this.plugin.settings.customTags.filter((tag) => tag !== oldTag);
+      await this.plugin.saveSettingsQuietly();
+    }
+    status.setText(newTag ? `已把 #${oldTag} 重命名为 #${newTag} ，影响${count}笔账目。` : `已从${count}笔账目删除 #${oldTag} 。`);
     new ButtonComponent(this.contentEl).setButtonText("返回标签管理").setCta().onClick(() => void this.renderTags());
   }
 

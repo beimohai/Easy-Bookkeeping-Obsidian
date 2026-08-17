@@ -1,16 +1,16 @@
 import { App, Modal, Notice } from "obsidian";
-import type { BookkeepingSettings, OptionField, TransactionDraft } from "./types";
-import { OPTION_FIELD_LABELS } from "./types";
+import type { BookkeepingSettings, EntryField, TransactionDraft } from "./types";
+import { ENTRY_FIELD_LABELS } from "./types";
 import type { TransactionStore } from "./transaction-store";
-import { currentMonth, currentTime, errorMessageZh, evaluateAmount, formatMoney, formatMonthDisplay, today } from "./utils";
+import { currentMonth, currentTime, errorMessageZh, evaluateAmount, formatMoney, formatMonthDisplay, parseNoteTags, today } from "./utils";
 import { translate } from "./locales";
 
-type KeyboardStep = "day" | OptionField | "targetAccount" | "title" | "amount" | "note" | "attachments";
+type KeyboardStep = EntryField | "targetAccount";
 
 export class KeyboardEntryModal extends Modal {
   private readonly month: string;
   private draft: TransactionDraft;
-  private step: KeyboardStep = "day";
+  private step: KeyboardStep = "date";
   private lastDay: string;
   private pendingAttachments: File[] = [];
   private activeOption = 0;
@@ -100,7 +100,7 @@ export class KeyboardEntryModal extends Modal {
     });
 
     this.errorEl = content.createDiv({ cls: "bookkeeping-form-error" });
-    content.createDiv({ cls: "bookkeeping-keyboard-help", text: `${this.displayKey(this.settings.keyboardShortcuts.confirm)}确认 ${this.displayKey(this.settings.keyboardShortcuts.previous)}/${this.displayKey(this.settings.keyboardShortcuts.next)}选择 ${this.displayKey(this.settings.keyboardShortcuts.back)}返回 ${this.displayKey(this.settings.keyboardShortcuts.close)}关闭` });
+    content.createDiv({ cls: "bookkeeping-keyboard-help", text: this.helpText(this.step) });
     window.setTimeout(() => {
       this.inputEl.focus();
       this.inputEl.select();
@@ -113,31 +113,43 @@ export class KeyboardEntryModal extends Modal {
       const value = this.inputEl.value.trim();
       const currentStep = this.step;
       const choices = this.optionValues(currentStep);
-      if (currentStep === "day") {
+      if (currentStep === "date") {
         const day = Number(value);
-        const days = new Date(Number(this.month.slice(0, 4)), Number(this.month.slice(5, 7)), 0).getDate();
-        if (!Number.isInteger(day) || day < 1 || day > days) throw new Error(`请输入1—${days}之间的日期`);
+        const days = this.daysInMonth();
+        if (!Number.isInteger(day) || day < 1 || day > days) throw new Error(`请输入1-${days}之间的日期`);
         this.lastDay = String(day).padStart(2, "0");
         this.draft.date = `${this.month}-${this.lastDay}`;
       } else if (choices.length) {
         const selected = this.resolveChoice(value, choices, this.optionCodes(currentStep, choices));
-        if (!selected) throw new Error("请输入选项编号或完整名称");
+        if (!selected) throw new Error(this.optionError(currentStep));
         this.applyOption(currentStep, selected);
       } else if (currentStep === "title") {
-        if (!value || /^\d+$/.test(value)) throw new Error("内容不能为空或纯数字");
+        if (!value) throw new Error("内容不得为空");
+        if (!this.settings.allowNumericTitle && /^\d+$/.test(value)) throw new Error("内容不能为纯数字");
         this.draft.title = value;
       } else if (currentStep === "amount") {
-        this.draft.expression = value;
-        this.draft.amount = evaluateAmount(value);
+        if (!value && this.settings.allowEmptyAmount) {
+          this.draft.expression = "";
+          this.draft.amount = 0;
+        } else {
+          if (!value) throw new Error("金额不得为空");
+          try {
+            this.draft.expression = value;
+            this.draft.amount = evaluateAmount(value);
+          } catch {
+            throw new Error("金额或算式无效");
+          }
+        }
       } else if (currentStep === "note") {
-        this.draft.note = value;
-        this.draft.tags = [...new Set([...value.matchAll(/#([\p{L}\p{N}_-]+)/gu)].map((match) => match[1] ?? "").filter(Boolean))];
+        const parsed = parseNoteTags(value);
+        this.draft.note = parsed.note;
+        this.draft.tags = parsed.tags;
       }
 
       const rebuilt = this.steps();
       const currentIndex = rebuilt.indexOf(currentStep);
       if (currentIndex >= rebuilt.length - 1) return void await this.finishSave();
-      this.step = rebuilt[Math.min(currentIndex + 1, rebuilt.length - 1)] ?? "day";
+      this.step = rebuilt[Math.min(currentIndex + 1, rebuilt.length - 1)] ?? "date";
       this.activeOption = 0;
       this.render();
     } catch (error) {
@@ -148,17 +160,17 @@ export class KeyboardEntryModal extends Modal {
   }
 
   private steps(): KeyboardStep[] {
-    const optionSteps = this.settings.optionFieldOrder.filter((field) => {
-      if (field === "account") return this.settings.enableAccount;
-      if (field === "category") return this.settings.enableCategory && this.draft.type !== "转账";
-      if (field === "type") return this.settings.enableType;
-      if (field === "necessity") return this.settings.enableNecessity && this.draft.type !== "转账";
-      if (field === "attachments") return this.settings.enableEntryAttachments;
-      return false;
-    });
-    const result: KeyboardStep[] = ["day", ...optionSteps];
+    const result: KeyboardStep[] = [];
+    for (const field of this.settings.optionFieldOrder) {
+      if (field === "date" || field === "title" || field === "amount") result.push(field);
+      else if (field === "note" && this.settings.enableNote) result.push(field);
+      if (field === "account" && this.settings.enableAccount) result.push(field);
+      else if (field === "category" && this.settings.enableCategory && this.draft.type !== "转账") result.push(field);
+      else if (field === "type" && this.settings.enableType) result.push(field);
+      else if (field === "necessity" && this.settings.enableNecessity && this.draft.type !== "转账") result.push(field);
+      else if (field === "attachments" && this.settings.enableEntryAttachments) result.push(field);
+    }
     if (this.draft.type === "转账" && this.settings.enableAccount) result.push("targetAccount");
-    result.push("title", "amount", "note");
     return result;
   }
 
@@ -211,7 +223,7 @@ export class KeyboardEntryModal extends Modal {
   }
 
   private initialInputValue(step: KeyboardStep, choices: string[]): string {
-    if (step === "day") return this.lastDay;
+    if (step === "date") return this.lastDay;
     if (!choices.length) return "";
     const current = step === "account" ? this.draft.account
       : step === "targetAccount" ? this.draft.targetAccount
@@ -223,28 +235,35 @@ export class KeyboardEntryModal extends Modal {
     return this.optionCodes(step, choices)[index] ?? String(index + 1);
   }
 
-  private isLastStep(step: KeyboardStep): boolean {
-    const steps = this.steps();
-    return steps[steps.length - 1] === step;
+  private daysInMonth(): number {
+    return new Date(Number(this.month.slice(0, 4)), Number(this.month.slice(5, 7)), 0).getDate();
   }
 
   private placeholder(step: KeyboardStep): string {
-    if (step === "day") return "输入日期中的日，例如21";
-    if (this.optionValues(step).length) return "输入编号，直接回车使用默认值";
-    if (step === "title") return "输入账目内容";
-    if (step === "amount") return "输入金额或算式，例如11.4+5.1";
-    if (step === "attachments") return this.isLastStep(step) ? "按Enter保存，可先拖入或选择附件" : "按Enter继续，可先拖入或选择附件";
-    return "输入备注；无备注直接回车";
+    if (step === "date") return `请输入1-${this.daysInMonth()}之间的日期`;
+    if (step === "type") return "请输入类型编号或完整名称";
+    if (step === "necessity") return "请输入必要性编号或完整名称";
+    if (this.optionValues(step).length) return `请输入${this.stepTitle(step).replace(/^选择/, "")}编号或完整名称`;
+    if (step === "title") return this.settings.allowNumericTitle ? "请输入账目内容" : "请输入账目内容（不能为纯数字）";
+    if (step === "amount") return "请输入金额或算式";
+    if (step === "attachments") return `按 ${this.displayKey(this.settings.keyboardShortcuts.confirm)} 继续`;
+    return "请输入备注，可以留空";
+  }
+
+  private helpText(step: KeyboardStep): string {
+    const confirm = this.displayKey(this.settings.keyboardShortcuts.confirm);
+    if (step === "attachments") return `按 ${confirm} 继续`;
+    return `${confirm}确认 ${this.displayKey(this.settings.keyboardShortcuts.previous)}/${this.displayKey(this.settings.keyboardShortcuts.next)}选择 ${this.displayKey(this.settings.keyboardShortcuts.back)}返回 ${this.displayKey(this.settings.keyboardShortcuts.close)}关闭`;
   }
 
   private stepTitle(step: KeyboardStep): string {
-    if (step === "day") return "输入日期";
+    if (step === "date") return "输入日期";
     if (step === "targetAccount") return "选择转入账户";
     if (step === "title") return "输入内容";
     if (step === "amount") return "输入金额";
-    if (step === "note") return this.isLastStep(step) ? "输入备注并保存" : "输入备注";
-    if (step === "attachments") return this.isLastStep(step) ? "添加附件并保存" : "添加附件";
-    return `选择${OPTION_FIELD_LABELS[step]}`;
+    if (step === "note") return "输入备注";
+    if (step === "attachments") return "添加附件";
+    return `选择${ENTRY_FIELD_LABELS[step]}`;
   }
 
   private renderOptionHighlight(): void {
@@ -257,7 +276,7 @@ export class KeyboardEntryModal extends Modal {
     const steps = this.steps();
     const index = steps.indexOf(this.step);
     if (index <= 0) return;
-    this.step = steps[index - 1] ?? "day";
+    this.step = steps[index - 1] ?? "date";
     this.activeOption = 0;
     this.render();
   }
@@ -293,12 +312,12 @@ export class KeyboardEntryModal extends Modal {
       return;
     }
     this.draft = this.newDraft(this.draft);
-    this.step = "day";
+    this.step = "date";
     this.render();
   }
 
   private renderAttachmentUploader(content: HTMLElement): void {
-    const area = content.createDiv({ cls: "bookkeeping-keyboard-attachment-dropzone", text: "拖动小票或发票到这里，或点击选择文件" });
+    const area = content.createDiv({ cls: "bookkeeping-keyboard-attachment-dropzone", text: "拖动文件到此处，或点击选择文件" });
     const input = area.createEl("input", { type: "file", attr: { multiple: "true", "aria-label": "选择附件" } });
     const list = content.createDiv({ cls: "bookkeeping-keyboard-attachment-list" });
     const renderList = (): void => {
@@ -358,5 +377,11 @@ export class KeyboardEntryModal extends Modal {
       tags: [],
       attachments: []
     };
+  }
+
+  private optionError(step: KeyboardStep): string {
+    if (step === "type") return "请输入类型编号或完整名称";
+    if (step === "necessity") return "请输入必要性编号或完整名称";
+    return `请输入${this.stepTitle(step).replace(/^选择/, "")}编号或完整名称`;
   }
 }

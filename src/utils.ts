@@ -195,6 +195,25 @@ export function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
 }
 
+export function parseNoteTags(input: string): { note: string; tags: string[] } {
+  const text = input.trim();
+  if (!text) return { note: "", tags: [] };
+  const tags: string[] = [];
+  let index = 0;
+  while (index < text.length) {
+    while (/\s/u.test(text[index] ?? "")) index++;
+    if (text[index] !== "#") break;
+    const start = index + 1;
+    let end = start;
+    while (end < text.length && !/\s/u.test(text[end] ?? "")) end++;
+    const tag = text.slice(start, end).trim();
+    if (tag) tags.push(tag);
+    index = end;
+  }
+  while (/\s/u.test(text[index] ?? "")) index++;
+  return { note: text.slice(index), tags: uniqueStrings(tags) };
+}
+
 export function escapeCsv(value: unknown): string {
   const text = String(value ?? "");
   return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;

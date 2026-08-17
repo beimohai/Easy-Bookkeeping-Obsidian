@@ -21,7 +21,7 @@ const EN: Record<string, string> = {
   "插件语言": "Plugin language",
   "简体中文": "Simplified Chinese",
   "繁體中文": "Traditional Chinese",
-  "退出后是否保持页面": "Keep dashboard state after closing",
+  "退出后是否保存界面": "Keep dashboard state after closing",
   "不保持": "Do not keep",
   "保持当前筛选": "Keep current filters",
   "保持当月界面": "Keep the current month view",
@@ -55,6 +55,10 @@ const EN: Record<string, string> = {
   "手机版保存后打开仪表盘": "Open dashboard after mobile entry",
   "允许内容重复": "Allow duplicate descriptions",
   "关闭后，新建或修改账目时不允许与同日账目使用相同内容。": "When disabled, transactions on the same date cannot share a description.",
+  "允许内容为纯数字": "Allow numeric-only descriptions",
+  "关闭后，内容只输入数字会提示重新填写。": "When disabled, descriptions containing only digits must be re-entered.",
+  "允许金额为空": "Allow empty amounts",
+  "开启后，金额留空会按0保存；关闭后必须输入金额或算式。": "When enabled, an empty amount is saved as 0. When disabled, an amount or expression is required.",
   "录入字段与顺序": "Entry fields and order",
   "录入预设": "Entry presets",
   "账户": "Account",
@@ -62,6 +66,7 @@ const EN: Record<string, string> = {
   "必要性": "Necessity",
   "分类": "Category",
   "附件": "Attachment",
+  "拖动文件到此处，或点击选择文件": "Drop files here, or click to choose files",
   "账目明细": "Transaction details",
   "账目数量": "Transaction count",
   "账目数": "Transaction count",
@@ -127,8 +132,6 @@ const EN: Record<string, string> = {
   "下一个选项": "Next option",
   "返回上一步": "Go back",
   "关闭": "Close",
-  "全局快捷键": "Global shortcuts",
-  "启用全局快捷键": "Enable global shortcuts",
   "打开仪表盘": "Open dashboard",
   "打开记账仪表盘": "Open bookkeeping dashboard",
   "开始记账": "Add transaction",
@@ -153,7 +156,7 @@ const EN: Record<string, string> = {
   "版本号": "Version",
   "最近更新": "Last updated",
   "更新日期": "Updated",
-  "更新日期：2026-08-07": "Updated: 2026-08-07",
+  "更新日期：2026-08-17": "Updated: 2026-08-17",
   "本项目基于 MIT License 开源": "Open source under the MIT License",
   "拖动排序": "Drag to reorder",
   "切换表头显示": "Toggle column visibility",
@@ -309,7 +312,6 @@ const EN: Record<string, string> = {
   "当前筛选没有账户": "No accounts match the current filters",
   "本月暂无对应数据": "No matching data this month",
   "没有符合条件的账目": "No matching transactions",
-  "尚未设置预算，点击右上角修改按钮添加。": "No budget has been set. Use the edit button in the top-right corner to add one.",
   "尚未显示年度图表，可点击上方“图表管理”添加。": "No annual charts are visible. Use Manage charts above to add one.",
   "未启用任何账目明细列，请在插件设置中选择。": "No transaction columns are enabled. Choose columns in plugin settings.",
   "可留空": "Optional",
@@ -472,6 +474,15 @@ const EN: Record<string, string> = {
   "请至少选择一项修改内容": "Choose at least one field to change",
   "批量删除账目": "Delete transactions in bulk",
   "桌面版记账": "Desktop entry",
+  "请输入账目内容": "Enter transaction description",
+  "请输入账目内容（不能为纯数字）": "Enter transaction description (not numeric-only)",
+  "请输入备注，可以留空": "Enter notes, optional",
+  "请输入金额或算式": "Enter an amount or expression",
+  "请输入类型编号或完整名称": "Enter the type code or full name",
+  "请输入必要性编号或完整名称": "Enter the necessity code or full name",
+  "金额不得为空": "Amount cannot be empty",
+  "金额或算式无效": "Invalid amount or expression",
+  "内容不能为纯数字": "Description cannot contain only numbers",
   "请输入选项编号或完整名称": "Enter an option code or its full name",
   "输入无效，请检查当前步骤": "Invalid input. Check the current step",
   "转入账户不能与转出账户相同": "Destination account must differ from the source account",
@@ -479,15 +490,11 @@ const EN: Record<string, string> = {
   "输入编号，直接回车使用默认值": "Enter a code, or press Enter to use the default",
   "输入账目内容": "Enter transaction description",
   "输入金额或算式，例如11.4+5.1": "Enter an amount or expression, for example 11.4+5.1",
-  "按Enter保存，可先拖入或选择附件": "Press Enter to save; you may drop or choose attachments first",
-  "按Enter继续，可先拖入或选择附件": "Press Enter to continue; you may drop or choose attachments first",
   "输入备注；无备注直接回车": "Enter notes, or press Enter for none",
   "输入日期": "Enter date",
   "输入内容": "Enter description",
   "输入金额": "Enter amount",
-  "输入备注并保存": "Enter notes and save",
   "输入备注": "Enter notes",
-  "添加附件并保存": "Add attachments and save",
   "请输入内容": "Enter a description",
   "无法确定插件安装目录": "Unable to locate the plugin installation folder",
   "Tag汇总": "Tag summary",
@@ -500,8 +507,8 @@ const EN: Record<string, string> = {
   "当前Obsidian版本不支持系统文件夹选择窗口": "This Obsidian version does not support the system folder picker",
   "当前环境无法读取外部文件夹": "External folders cannot be read in this environment",
   "同步现有账目的算式格式？": "Synchronize expression storage for existing transactions?",
-  "设置已经启用。是否把现有账目的算式同步写入备注？算式Properties仍会保留。": "This option is now enabled. Write existing expressions into notes? Expression properties will remain.",
-  "设置已经关闭。是否从现有账目的备注中移除自动写入的算式行？算式Properties仍会保留。": "This option is now disabled. Remove automatically written expression lines from existing notes? Expression properties will remain.",
+  "设置已经启用。是否把现有账目的算式同步写入备注？": "This option is now enabled. Write existing expressions into notes?",
+  "设置已经关闭。是否从现有账目的备注中移除自动写入的算式行，并移除专门的算式属性？": "This option is now disabled. Remove automatically written expression lines from notes and remove the dedicated expression property?",
   "自定义日期范围": "Custom date range",
   "保存目录不能为空": "Destination folder cannot be empty",
   "文件名不能为空": "File name cannot be empty",
@@ -734,31 +741,31 @@ const LOCALE_TEMPLATES: Partial<Record<Language, Record<"addIn" | "entryMonth" |
 
 const LOCALE_ENTRY_TERMS: Partial<Record<Language, Record<string, string>>> = {
   fr: {
-    "桌面版记账": "Saisie sur ordinateur", "桌面版连续记账": "Saisie continue sur ordinateur", "输入日期中的日，例如21": "Saisissez le jour du mois, par exemple 21", "输入编号，直接回车使用默认值": "Saisissez un code ou appuyez sur Entrée pour la valeur par défaut", "输入账目内容": "Saisissez le libellé", "输入金额或算式，例如11.4+5.1": "Saisissez un montant ou une formule, par exemple 11.4+5.1", "输入备注；无备注直接回车": "Saisissez une note ou appuyez sur Entrée s’il n’y en a pas", "按Enter保存，可先拖入或选择附件": "Appuyez sur Entrée pour enregistrer ; vous pouvez d’abord ajouter des pièces jointes", "按Enter继续，可先拖入或选择附件": "Appuyez sur Entrée pour continuer ; vous pouvez d’abord ajouter des pièces jointes", "请输入选项编号或完整名称": "Saisissez le code ou le nom complet de l’option", "输入无效，请检查当前步骤": "Saisie incorrecte ; vérifiez l’étape actuelle", "输入日期": "Saisir la date", "输入内容": "Saisir le libellé", "输入金额": "Saisir le montant", "输入备注": "Saisir une note", "输入备注并保存": "Saisir une note et enregistrer", "添加附件并保存": "Ajouter des pièces jointes et enregistrer", "内容不能为空或纯数字": "Le libellé ne peut pas être vide ni uniquement numérique", "转入账户不能与转出账户相同": "Le compte destinataire doit être différent du compte source"
+    "桌面版记账": "Saisie sur ordinateur", "桌面版连续记账": "Saisie continue sur ordinateur", "输入日期中的日，例如21": "Saisissez le jour du mois, par exemple 21", "输入编号，直接回车使用默认值": "Saisissez un code ou appuyez sur Entrée pour la valeur par défaut", "输入账目内容": "Saisissez le libellé", "输入金额或算式，例如11.4+5.1": "Saisissez un montant ou une formule, par exemple 11.4+5.1", "输入备注；无备注直接回车": "Saisissez une note ou appuyez sur Entrée s’il n’y en a pas", "请输入选项编号或完整名称": "Saisissez le code ou le nom complet de l’option", "输入无效，请检查当前步骤": "Saisie incorrecte ; vérifiez l’étape actuelle", "输入日期": "Saisir la date", "输入内容": "Saisir le libellé", "输入金额": "Saisir le montant", "输入备注": "Saisir une note", "内容不能为空或纯数字": "Le libellé ne peut pas être vide ni uniquement numérique", "转入账户不能与转出账户相同": "Le compte destinataire doit être différent du compte source"
   },
   ru: {
-    "桌面版记账": "Ввод на компьютере", "桌面版连续记账": "Непрерывный ввод на компьютере", "输入日期中的日，例如21": "Введите день месяца, например 21", "输入编号，直接回车使用默认值": "Введите код или нажмите Enter для значения по умолчанию", "输入账目内容": "Введите описание операции", "输入金额或算式，例如11.4+5.1": "Введите сумму или выражение, например 11.4+5.1", "输入备注；无备注直接回车": "Введите примечание или нажмите Enter, если его нет", "按Enter保存，可先拖入或选择附件": "Нажмите Enter для сохранения; сначала можно добавить вложения", "按Enter继续，可先拖入或选择附件": "Нажмите Enter для продолжения; сначала можно добавить вложения", "请输入选项编号或完整名称": "Введите код или полное название варианта", "输入无效，请检查当前步骤": "Некорректный ввод; проверьте текущий шаг", "输入日期": "Введите дату", "输入内容": "Введите описание", "输入金额": "Введите сумму", "输入备注": "Введите примечание", "输入备注并保存": "Введите примечание и сохраните", "添加附件并保存": "Добавьте вложения и сохраните", "内容不能为空或纯数字": "Описание не может быть пустым или состоять только из цифр", "转入账户不能与转出账户相同": "Счёт назначения должен отличаться от исходного"
+    "桌面版记账": "Ввод на компьютере", "桌面版连续记账": "Непрерывный ввод на компьютере", "输入日期中的日，例如21": "Введите день месяца, например 21", "输入编号，直接回车使用默认值": "Введите код или нажмите Enter для значения по умолчанию", "输入账目内容": "Введите описание операции", "输入金额或算式，例如11.4+5.1": "Введите сумму или выражение, например 11.4+5.1", "输入备注；无备注直接回车": "Введите примечание или нажмите Enter, если его нет", "请输入选项编号或完整名称": "Введите код или полное название варианта", "输入无效，请检查当前步骤": "Некорректный ввод; проверьте текущий шаг", "输入日期": "Введите дату", "输入内容": "Введите описание", "输入金额": "Введите сумму", "输入备注": "Введите примечание", "内容不能为空或纯数字": "Описание не может быть пустым или состоять только из цифр", "转入账户不能与转出账户相同": "Счёт назначения должен отличаться от исходного"
   },
   es: {
-    "桌面版记账": "Registro en ordenador", "桌面版连续记账": "Registro continuo en ordenador", "输入日期中的日，例如21": "Introduce el día del mes, por ejemplo 21", "输入编号，直接回车使用默认值": "Introduce un código o pulsa Intro para usar el valor predeterminado", "输入账目内容": "Introduce la descripción", "输入金额或算式，例如11.4+5.1": "Introduce un importe o una fórmula, por ejemplo 11.4+5.1", "输入备注；无备注直接回车": "Introduce una nota o pulsa Intro si no hay ninguna", "按Enter保存，可先拖入或选择附件": "Pulsa Intro para guardar; antes puedes añadir archivos adjuntos", "按Enter继续，可先拖入或选择附件": "Pulsa Intro para continuar; antes puedes añadir archivos adjuntos", "请输入选项编号或完整名称": "Introduce el código o el nombre completo de la opción", "输入无效，请检查当前步骤": "Entrada no válida; revisa el paso actual", "输入日期": "Introducir fecha", "输入内容": "Introducir descripción", "输入金额": "Introducir importe", "输入备注": "Introducir nota", "输入备注并保存": "Introducir nota y guardar", "添加附件并保存": "Añadir archivos y guardar", "内容不能为空或纯数字": "La descripción no puede estar vacía ni contener solo números", "转入账户不能与转出账户相同": "La cuenta de destino debe ser distinta de la cuenta de origen"
+    "桌面版记账": "Registro en ordenador", "桌面版连续记账": "Registro continuo en ordenador", "输入日期中的日，例如21": "Introduce el día del mes, por ejemplo 21", "输入编号，直接回车使用默认值": "Introduce un código o pulsa Intro para usar el valor predeterminado", "输入账目内容": "Introduce la descripción", "输入金额或算式，例如11.4+5.1": "Introduce un importe o una fórmula, por ejemplo 11.4+5.1", "输入备注；无备注直接回车": "Introduce una nota o pulsa Intro si no hay ninguna", "请输入选项编号或完整名称": "Introduce el código o el nombre completo de la opción", "输入无效，请检查当前步骤": "Entrada no válida; revisa el paso actual", "输入日期": "Introducir fecha", "输入内容": "Introducir descripción", "输入金额": "Introducir importe", "输入备注": "Introducir nota", "内容不能为空或纯数字": "La descripción no puede estar vacía ni contener solo números", "转入账户不能与转出账户相同": "La cuenta de destino debe ser distinta de la cuenta de origen"
   },
   ar: {
-    "桌面版记账": "إدخال سطح المكتب", "桌面版连续记账": "إدخال متواصل على سطح المكتب", "输入日期中的日，例如21": "أدخل يوم الشهر، مثل 21", "输入编号，直接回车使用默认值": "أدخل الرمز أو اضغط Enter لاستخدام القيمة الافتراضية", "输入账目内容": "أدخل وصف المعاملة", "输入金额或算式，例如11.4+5.1": "أدخل مبلغاً أو صيغة، مثل 11.4+5.1", "输入备注；无备注直接回车": "أدخل ملاحظة أو اضغط Enter إذا لم توجد", "按Enter保存，可先拖入或选择附件": "اضغط Enter للحفظ؛ ويمكنك إضافة المرفقات أولاً", "按Enter继续，可先拖入或选择附件": "اضغط Enter للمتابعة؛ ويمكنك إضافة المرفقات أولاً", "请输入选项编号或完整名称": "أدخل رمز الخيار أو اسمه الكامل", "输入无效，请检查当前步骤": "إدخال غير صالح؛ تحقق من الخطوة الحالية", "输入日期": "أدخل التاريخ", "输入内容": "أدخل الوصف", "输入金额": "أدخل المبلغ", "输入备注": "أدخل الملاحظة", "输入备注并保存": "أدخل الملاحظة واحفظ", "添加附件并保存": "أضف المرفقات واحفظ", "内容不能为空或纯数字": "لا يمكن أن يكون الوصف فارغاً أو أرقاماً فقط", "转入账户不能与转出账户相同": "يجب أن يختلف الحساب الوجهة عن الحساب المصدر"
+    "桌面版记账": "إدخال سطح المكتب", "桌面版连续记账": "إدخال متواصل على سطح المكتب", "输入日期中的日，例如21": "أدخل يوم الشهر، مثل 21", "输入编号，直接回车使用默认值": "أدخل الرمز أو اضغط Enter لاستخدام القيمة الافتراضية", "输入账目内容": "أدخل وصف المعاملة", "输入金额或算式，例如11.4+5.1": "أدخل مبلغاً أو صيغة، مثل 11.4+5.1", "输入备注；无备注直接回车": "أدخل ملاحظة أو اضغط Enter إذا لم توجد", "请输入选项编号或完整名称": "أدخل رمز الخيار أو اسمه الكامل", "输入无效，请检查当前步骤": "إدخال غير صالح؛ تحقق من الخطوة الحالية", "输入日期": "أدخل التاريخ", "输入内容": "أدخل الوصف", "输入金额": "أدخل المبلغ", "输入备注": "أدخل الملاحظة", "内容不能为空或纯数字": "لا يمكن أن يكون الوصف فارغاً أو أرقاماً فقط", "转入账户不能与转出账户相同": "يجب أن يختلف الحساب الوجهة عن الحساب المصدر"
   },
   ja: {
-    "桌面版记账": "デスクトップ入力", "桌面版连续记账": "デスクトップ連続入力", "输入日期中的日，例如21": "日付の日を入力（例：21）", "输入编号，直接回车使用默认值": "コードを入力。既定値は Enter", "输入账目内容": "取引内容を入力", "输入金额或算式，例如11.4+5.1": "金額または式を入力（例：11.4+5.1）", "输入备注；无备注直接回车": "メモを入力。なければ Enter", "按Enter保存，可先拖入或选择附件": "Enter で保存。先に添付を追加できます", "按Enter继续，可先拖入或选择附件": "Enter で続行。先に添付を追加できます", "请输入选项编号或完整名称": "コードまたは完全な名称を入力", "输入无效，请检查当前步骤": "入力が無効です。現在の手順を確認してください", "输入日期": "日付を入力", "输入内容": "内容を入力", "输入金额": "金額を入力", "输入备注": "メモを入力", "输入备注并保存": "メモを入力して保存", "添加附件并保存": "添付を追加して保存", "内容不能为空或纯数字": "内容は空欄または数字だけにはできません", "转入账户不能与转出账户相同": "振替先口座は振替元口座と異なる必要があります"
+    "桌面版记账": "デスクトップ入力", "桌面版连续记账": "デスクトップ連続入力", "输入日期中的日，例如21": "日付の日を入力（例：21）", "输入编号，直接回车使用默认值": "コードを入力。既定値は Enter", "输入账目内容": "取引内容を入力", "输入金额或算式，例如11.4+5.1": "金額または式を入力（例：11.4+5.1）", "输入备注；无备注直接回车": "メモを入力。なければ Enter", "请输入选项编号或完整名称": "コードまたは完全な名称を入力", "输入无效，请检查当前步骤": "入力が無効です。現在の手順を確認してください", "输入日期": "日付を入力", "输入内容": "内容を入力", "输入金额": "金額を入力", "输入备注": "メモを入力", "内容不能为空或纯数字": "内容は空欄または数字だけにはできません", "转入账户不能与转出账户相同": "振替先口座は振替元口座と異なる必要があります"
   },
   ko: {
-    "桌面版记账": "데스크톱 입력", "桌面版连续记账": "데스크톱 연속 입력", "输入日期中的日，例如21": "날짜의 일을 입력하세요(예: 21)", "输入编号，直接回车使用默认值": "코드를 입력하거나 기본값은 Enter를 누르세요", "输入账目内容": "거래 내용을 입력하세요", "输入金额或算式，例如11.4+5.1": "금액 또는 수식을 입력하세요(예: 11.4+5.1)", "输入备注；无备注直接回车": "메모를 입력하거나 없으면 Enter를 누르세요", "按Enter保存，可先拖入或选择附件": "Enter로 저장합니다. 먼저 첨부 파일을 추가할 수 있습니다", "按Enter继续，可先拖入或选择附件": "Enter로 계속합니다. 먼저 첨부 파일을 추가할 수 있습니다", "请输入选项编号或完整名称": "옵션 코드 또는 전체 이름을 입력하세요", "输入无效，请检查当前步骤": "입력이 올바르지 않습니다. 현재 단계를 확인하세요", "输入日期": "날짜 입력", "输入内容": "내용 입력", "输入金额": "금액 입력", "输入备注": "메모 입력", "输入备注并保存": "메모 입력 후 저장", "添加附件并保存": "첨부 추가 후 저장", "内容不能为空或纯数字": "내용은 비워 두거나 숫자로만 입력할 수 없습니다", "转入账户不能与转出账户相同": "대상 계정은 원본 계정과 달라야 합니다"
+    "桌面版记账": "데스크톱 입력", "桌面版连续记账": "데스크톱 연속 입력", "输入日期中的日，例如21": "날짜의 일을 입력하세요(예: 21)", "输入编号，直接回车使用默认值": "코드를 입력하거나 기본값은 Enter를 누르세요", "输入账目内容": "거래 내용을 입력하세요", "输入金额或算式，例如11.4+5.1": "금액 또는 수식을 입력하세요(예: 11.4+5.1)", "输入备注；无备注直接回车": "메모를 입력하거나 없으면 Enter를 누르세요", "请输入选项编号或完整名称": "옵션 코드 또는 전체 이름을 입력하세요", "输入无效，请检查当前步骤": "입력이 올바르지 않습니다. 현재 단계를 확인하세요", "输入日期": "날짜 입력", "输入内容": "내용 입력", "输入金额": "금액 입력", "输入备注": "메모 입력", "内容不能为空或纯数字": "내용은 비워 두거나 숫자로만 입력할 수 없습니다", "转入账户不能与转出账户相同": "대상 계정은 원본 계정과 달라야 합니다"
   },
   de: {
-    "桌面版记账": "Desktop-Erfassung", "桌面版连续记账": "Fortlaufende Desktop-Erfassung", "输入日期中的日，例如21": "Tag des Monats eingeben, zum Beispiel 21", "输入编号，直接回车使用默认值": "Code eingeben oder Enter für den Standardwert drücken", "输入账目内容": "Buchungsbeschreibung eingeben", "输入金额或算式，例如11.4+5.1": "Betrag oder Ausdruck eingeben, zum Beispiel 11.4+5.1", "输入备注；无备注直接回车": "Notiz eingeben oder Enter drücken, wenn keine vorhanden ist", "按Enter保存，可先拖入或选择附件": "Enter zum Speichern; Anhänge können vorher hinzugefügt werden", "按Enter继续，可先拖入或选择附件": "Enter zum Fortfahren; Anhänge können vorher hinzugefügt werden", "请输入选项编号或完整名称": "Code oder vollständigen Namen der Option eingeben", "输入无效，请检查当前步骤": "Ungültige Eingabe; aktuellen Schritt prüfen", "输入日期": "Datum eingeben", "输入内容": "Beschreibung eingeben", "输入金额": "Betrag eingeben", "输入备注": "Notiz eingeben", "输入备注并保存": "Notiz eingeben und speichern", "添加附件并保存": "Anhänge hinzufügen und speichern", "内容不能为空或纯数字": "Die Beschreibung darf nicht leer sein oder nur aus Zahlen bestehen", "转入账户不能与转出账户相同": "Zielkonto und Quellkonto müssen verschieden sein"
+    "桌面版记账": "Desktop-Erfassung", "桌面版连续记账": "Fortlaufende Desktop-Erfassung", "输入日期中的日，例如21": "Tag des Monats eingeben, zum Beispiel 21", "输入编号，直接回车使用默认值": "Code eingeben oder Enter für den Standardwert drücken", "输入账目内容": "Buchungsbeschreibung eingeben", "输入金额或算式，例如11.4+5.1": "Betrag oder Ausdruck eingeben, zum Beispiel 11.4+5.1", "输入备注；无备注直接回车": "Notiz eingeben oder Enter drücken, wenn keine vorhanden ist", "请输入选项编号或完整名称": "Code oder vollständigen Namen der Option eingeben", "输入无效，请检查当前步骤": "Ungültige Eingabe; aktuellen Schritt prüfen", "输入日期": "Datum eingeben", "输入内容": "Beschreibung eingeben", "输入金额": "Betrag eingeben", "输入备注": "Notiz eingeben", "内容不能为空或纯数字": "Die Beschreibung darf nicht leer sein oder nur aus Zahlen bestehen", "转入账户不能与转出账户相同": "Zielkonto und Quellkonto müssen verschieden sein"
   },
   pt: {
-    "桌面版记账": "Registo no computador", "桌面版连续记账": "Registo contínuo no computador", "输入日期中的日，例如21": "Introduza o dia do mês, por exemplo 21", "输入编号，直接回车使用默认值": "Introduza um código ou prima Enter para usar o valor predefinido", "输入账目内容": "Introduza a descrição", "输入金额或算式，例如11.4+5.1": "Introduza um valor ou fórmula, por exemplo 11.4+5.1", "输入备注；无备注直接回车": "Introduza uma nota ou prima Enter se não houver", "按Enter保存，可先拖入或选择附件": "Prima Enter para guardar; pode adicionar anexos primeiro", "按Enter继续，可先拖入或选择附件": "Prima Enter para continuar; pode adicionar anexos primeiro", "请输入选项编号或完整名称": "Introduza o código ou o nome completo da opção", "输入无效，请检查当前步骤": "Entrada inválida; verifique o passo atual", "输入日期": "Introduzir data", "输入内容": "Introduzir descrição", "输入金额": "Introduzir valor", "输入备注": "Introduzir nota", "输入备注并保存": "Introduzir nota e guardar", "添加附件并保存": "Adicionar anexos e guardar", "内容不能为空或纯数字": "A descrição não pode estar vazia nem conter apenas números", "转入账户不能与转出账户相同": "A conta de destino deve ser diferente da conta de origem"
+    "桌面版记账": "Registo no computador", "桌面版连续记账": "Registo contínuo no computador", "输入日期中的日，例如21": "Introduza o dia do mês, por exemplo 21", "输入编号，直接回车使用默认值": "Introduza um código ou prima Enter para usar o valor predefinido", "输入账目内容": "Introduza a descrição", "输入金额或算式，例如11.4+5.1": "Introduza um valor ou fórmula, por exemplo 11.4+5.1", "输入备注；无备注直接回车": "Introduza uma nota ou prima Enter se não houver", "请输入选项编号或完整名称": "Introduza o código ou o nome completo da opção", "输入无效，请检查当前步骤": "Entrada inválida; verifique o passo atual", "输入日期": "Introduzir data", "输入内容": "Introduzir descrição", "输入金额": "Introduzir valor", "输入备注": "Introduzir nota", "内容不能为空或纯数字": "A descrição não pode estar vazia nem conter apenas números", "转入账户不能与转出账户相同": "A conta de destino deve ser diferente da conta de origem"
   },
   fa: {
-    "桌面版记账": "ثبت رومیزی", "桌面版连续记账": "ثبت پیوسته رومیزی", "输入日期中的日，例如21": "روز ماه را وارد کنید، برای نمونه 21", "输入编号，直接回车使用默认值": "کد را وارد کنید یا برای مقدار پیش‌فرض Enter بزنید", "输入账目内容": "شرح تراکنش را وارد کنید", "输入金额或算式，例如11.4+5.1": "مبلغ یا عبارت را وارد کنید، برای نمونه 11.4+5.1", "输入备注；无备注直接回车": "یادداشت را وارد کنید یا اگر ندارید Enter بزنید", "按Enter保存，可先拖入或选择附件": "برای ذخیره Enter بزنید؛ ابتدا می‌توانید پیوست اضافه کنید", "按Enter继续，可先拖入或选择附件": "برای ادامه Enter بزنید؛ ابتدا می‌توانید پیوست اضافه کنید", "请输入选项编号或完整名称": "کد یا نام کامل گزینه را وارد کنید", "输入无效，请检查当前步骤": "ورودی نامعتبر است؛ مرحله فعلی را بررسی کنید", "输入日期": "تاریخ را وارد کنید", "输入内容": "شرح را وارد کنید", "输入金额": "مبلغ را وارد کنید", "输入备注": "یادداشت را وارد کنید", "输入备注并保存": "یادداشت را وارد و ذخیره کنید", "添加附件并保存": "پیوست اضافه و ذخیره کنید", "内容不能为空或纯数字": "شرح نمی‌تواند خالی یا فقط شامل عدد باشد", "转入账户不能与转出账户相同": "حساب مقصد باید با حساب مبدأ متفاوت باشد"
+    "桌面版记账": "ثبت رومیزی", "桌面版连续记账": "ثبت پیوسته رومیزی", "输入日期中的日，例如21": "روز ماه را وارد کنید، برای نمونه 21", "输入编号，直接回车使用默认值": "کد را وارد کنید یا برای مقدار پیش‌فرض Enter بزنید", "输入账目内容": "شرح تراکنش را وارد کنید", "输入金额或算式，例如11.4+5.1": "مبلغ یا عبارت را وارد کنید، برای نمونه 11.4+5.1", "输入备注；无备注直接回车": "یادداشت را وارد کنید یا اگر ندارید Enter بزنید", "请输入选项编号或完整名称": "کد یا نام کامل گزینه را وارد کنید", "输入无效，请检查当前步骤": "ورودی نامعتبر است؛ مرحله فعلی را بررسی کنید", "输入日期": "تاریخ را وارد کنید", "输入内容": "شرح را وارد کنید", "输入金额": "مبلغ را وارد کنید", "输入备注": "یادداشت را وارد کنید", "内容不能为空或纯数字": "شرح نمی‌تواند خالی یا فقط شامل عدد باشد", "转入账户不能与转出账户相同": "حساب مقصد باید با حساب مبدأ متفاوت باشد"
   }
 };
 
@@ -793,6 +800,7 @@ function translateEnglish(source: string): string {
   const directPatterns: Array<[RegExp, (...matches: string[]) => string]> = [
     [/^在(.+)新建账目$/u, (_, month) => `Add transaction in ${month.replace(/年/u, "-").replace(/月/u, "")}`],
     [/^记账月份：(.+)$/u, (_, month) => `Transaction month: ${month.replace(/年/u, "-").replace(/月/u, "")}`],
+    [/^请输入1-(\d+)之间的日期$/u, (_, maximum) => `Enter a day from 1 to ${maximum}`],
     [/^已隐藏“(.+)”$/u, (_, title) => `Hidden “${translateEnglish(title)}”`],
     [/^已删除图表“(.+)”$/u, (_, title) => `Deleted chart “${translateEnglish(title)}”`],
     [/^请至少选择一个(.+)，或点击“清除筛选”$/u, (_, label) => `Select at least one ${translateEnglish(label).toLowerCase()}, or click “Clear filters”`],
@@ -840,6 +848,7 @@ function translateEnglish(source: string): string {
     [/^(\d+)月$/u, (_, month) => `Month ${month}`],
     [/^保存时上传并自动重命名：(.+)$/u, (_, file) => `Upload and rename when saved: ${file}`],
     [/^(.+)确认\s+(.+)\/(.+)选择\s+(.+)返回\s+(.+)关闭$/u, (_, confirm, previous, next, back, close) => `${confirm} Confirm  ${previous}/${next} Select  ${back} Back  ${close} Close`],
+    [/^按\s*(.+)\s*继续$/u, (_, key) => `Press ${key} to continue`],
     [/^检测到约(\d+)行数据。会自动识别常见中英文列名，并跳过疑似重复账目。$/u, (_, count) => `About ${count} rows detected. Common Chinese and English column names will be recognized automatically, and likely duplicates will be skipped.`],
     [/^(\d+)笔$/u, (_, count) => `${count} transaction${count === "1" ? "" : "s"}`],
     [/^按(.+)排序$/u, (_, label) => `Sort by ${translateEnglish(label)}`],

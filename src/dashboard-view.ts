@@ -10,16 +10,30 @@ type DashboardFilters = DashboardFilterState;
 
 const emptyDashboardFilters = (): DashboardFilters => ({
   types: [], necessities: [], categories: [], accounts: [], keyword: "",
-  amountMin: "", amountMax: "", dateFrom: "", dateTo: "", tags: "", crossMonth: false
+  amountMin: "", amountMax: "", dateFrom: "", dateTo: "", tags: "", crossMonth: false, calendarDate: ""
 });
 
 const cloneDashboardFilters = (filters: DashboardFilters): DashboardFilters => ({
   ...filters,
+  calendarDate: filters.calendarDate ?? "",
   types: [...filters.types],
   necessities: [...filters.necessities],
   categories: [...filters.categories],
   accounts: [...filters.accounts]
 });
+
+function normalizeTypedDateInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
+function completeTypedDateInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length !== 8) return raw;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+}
 
 type SortDirection = "asc" | "desc";
 
@@ -50,6 +64,7 @@ export class DashboardView extends ItemView {
   private deletingIds = new Set<string>();
   private exportIds: string[] = [];
   private preferredScrollAnchor = "";
+  private scrollElement: HTMLElement | Window = window;
   private trendCache = new Map<string, number[]>();
   private tableResizeObserver: ResizeObserver | null = null;
   private openMultiFilter: "types" | "necessities" | "categories" | "accounts" | "tags" | null = null;
@@ -86,7 +101,9 @@ export class DashboardView extends ItemView {
 
   async onOpen(): Promise<void> {
     this.containerEl.addClass("bookkeeping-view-container");
-    this.registerDomEvent(this.contentEl, "scroll", () => this.updateFloatingBackToTop());
+    this.scrollElement = Platform.isMobile ? this.resolveMobileScrollElement() : this.contentEl;
+    if (this.scrollElement instanceof Window) this.registerDomEvent(window, "scroll", () => this.updateFloatingBackToTop(), { passive: true });
+    else this.registerDomEvent(this.scrollElement, "scroll", () => this.updateFloatingBackToTop());
     this.registerDomEvent(document, "pointerdown", (event) => {
       const opened = this.contentEl.querySelector<HTMLDetailsElement>(".bookkeeping-multi-filter[open]");
       const target = event.target;
@@ -95,14 +112,6 @@ export class DashboardView extends ItemView {
         opened.removeAttribute("open");
         this.openMultiFilter = null;
       }
-      const panel = this.contentEl.querySelector<HTMLElement>(".bookkeeping-advanced-filters");
-      const toggle = this.contentEl.querySelector<HTMLElement>(".bookkeeping-filter-toggle");
-      const controls = this.contentEl.querySelector<HTMLElement>(".bookkeeping-filters");
-      if (!panel || panel.contains(target) || toggle?.contains(target) || controls?.contains(target)) return;
-      this.showAdvancedFilters = false;
-      this.openMultiFilter = null;
-      this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
-      void this.render();
     }, true);
     await this.render();
   }
@@ -164,7 +173,7 @@ export class DashboardView extends ItemView {
       ? document.activeElement
       : null;
     const searchCaret = activeSearch?.selectionStart ?? null;
-    const scrollTop = this.contentEl.scrollTop;
+    const scrollTop = this.getScrollTop();
     const tableScrollLeft = this.contentEl.querySelector<HTMLElement>(".bookkeeping-table-wrapper")?.scrollLeft ?? 0;
     const contentTop = this.contentEl.getBoundingClientRect().top;
     const preferredSelector = this.preferredScrollAnchor;
@@ -226,40 +235,94 @@ export class DashboardView extends ItemView {
     const icon = button.createSpan();
     setIcon(icon, "arrow-up-to-line");
     button.createSpan({ text: "返回顶部" });
-    button.addEventListener("click", () => this.contentEl.scrollTo({ top: 0, behavior: "smooth" }));
+    button.addEventListener("click", () => this.scrollToTop());
     this.updateFloatingBackToTop();
   }
 
   private updateFloatingBackToTop(): void {
     const button = this.containerEl.querySelector<HTMLElement>(".bookkeeping-floating-back-to-top");
-    button?.toggleClass("is-visible", this.contentEl.scrollTop > 4);
+    button?.toggleClass("is-visible", this.getScrollTop() > 4);
+  }
+
+  private getScrollTop(): number {
+    return this.scrollElement instanceof Window
+      ? window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
+      : this.scrollElement.scrollTop;
+  }
+
+  private resolveMobileScrollElement(): HTMLElement | Window {
+    const viewScroller = this.contentEl.closest<HTMLElement>(".view-content, .workspace-leaf-content");
+    if (viewScroller) return viewScroller;
+    for (let element = this.contentEl.parentElement; element; element = element.parentElement) {
+      const style = window.getComputedStyle(element);
+      if (!/(auto|scroll|overlay)/.test(style.overflowY)) continue;
+      if (element.scrollHeight <= element.clientHeight + 1) continue;
+      return element;
+    }
+    return window;
+  }
+
+  private setScrollTop(value: number): void {
+    if (this.scrollElement instanceof Window) window.scrollTo({ top: value, left: window.scrollX });
+    else this.scrollElement.scrollTop = value;
+  }
+
+  private scrollBy(delta: number): void {
+    if (this.scrollElement instanceof Window) window.scrollBy({ top: delta, left: 0 });
+    else this.scrollElement.scrollTop += delta;
+  }
+
+  private scrollToTop(): void {
+    if (this.scrollElement instanceof Window) window.scrollTo({ top: 0, behavior: "smooth" });
+    else this.scrollElement.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   private renderHeader(content: HTMLElement): void {
     const header = content.createDiv({ cls: "bookkeeping-dashboard-header" });
     const title = header.createDiv({ cls: "bookkeeping-dashboard-title" });
     title.createEl("h2", { text: "记账仪表盘" });
+    const monthSlot = header.createDiv({ cls: "bookkeeping-month-slot" });
     const actions = header.createDiv({ cls: "bookkeeping-header-actions" });
-    const monthInput = actions.createEl("input", { cls: "bookkeeping-month-input", type: "month", value: this.month, attr: { "aria-label": "选择仪表盘月份", lang: this.plugin.settings.language } });
+    const isPhone = Platform.isMobile && window.matchMedia("(max-width: 700px)").matches;
+    const actionGroup = actions.createDiv({ cls: `bookkeeping-header-action-buttons${isPhone ? " is-phone-split" : ""}` });
+    const monthInput = actionGroup.createEl("input", { cls: "bookkeeping-month-input", type: "month", value: this.month, attr: { "aria-label": "选择仪表盘月份", lang: this.plugin.settings.language } });
     monthInput.addEventListener("change", () => {
       if (!/^\d{4}-\d{2}$/.test(monthInput.value)) return;
       void this.switchMonth(monthInput.value);
     });
     const displayMonth = formatMonthDisplay(this.month, this.plugin.settings.yearMonthDisplayFormat, this.plugin.settings.language);
-    new ButtonComponent(actions).setIcon("plus").setTooltip(`在${displayMonth}新建账目`).setCta().onClick(() => this.plugin.openEntry(false, null, undefined, this.month));
-    new ButtonComponent(actions).setIcon("panels-top-left").setTooltip("配置仪表盘图表").onClick(() => new DashboardChartsModal(this.app, this.plugin, () => this.render()).open());
-    for (const action of this.plugin.settings.headerActionOrder.filter((action) => !this.plugin.settings.collapsedHeaderActions.includes(action))) this.renderHeaderAction(actions, action);
+    const visibleHeaderActions = this.plugin.settings.headerActionOrder.filter((action) => !this.plugin.settings.collapsedHeaderActions.includes(action));
+    const renderPrimaryAction = (parent: HTMLElement): void => {
+      new ButtonComponent(parent).setIcon("plus").setTooltip(`在${displayMonth}新建账目`).setCta().onClick(() => this.plugin.openEntry(false, null, undefined, this.month));
+    };
+    const renderChartAction = (parent: HTMLElement): void => {
+      new ButtonComponent(parent).setIcon("panels-top-left").setTooltip("配置仪表盘图表").onClick(() => new DashboardChartsModal(this.app, this.plugin, () => this.render()).open());
+    };
+    let phonePrimaryActionRow: HTMLElement | null = null;
+    if (isPhone) {
+      const topRow = actionGroup.createDiv({ cls: "bookkeeping-header-action-row-primary" });
+      phonePrimaryActionRow = topRow;
+      const renderers: Array<(parent: HTMLElement) => void> = [renderPrimaryAction, renderChartAction, ...visibleHeaderActions.map((action) => (parent: HTMLElement) => this.renderHeaderAction(parent, action))];
+      renderers.forEach((render) => render(topRow));
+    } else {
+      renderPrimaryAction(actionGroup);
+      renderChartAction(actionGroup);
+      for (const action of visibleHeaderActions) this.renderHeaderAction(actionGroup, action);
+    }
     const menuButton = actions.createEl("button", { cls: "clickable-icon", attr: { "aria-label": "更多仪表盘操作" } });
     setIcon(menuButton, "ellipsis");
     menuButton.addEventListener("click", (event) => this.openDashboardMenu(event));
+    if (isPhone) {
+      monthSlot.appendChild(monthInput);
+      phonePrimaryActionRow?.appendChild(menuButton);
+    }
   }
 
   private renderEmptyGuide(content: HTMLElement): void {
     const guide = content.createDiv({ cls: "bookkeeping-empty-guide" });
     const icon = guide.createSpan({ cls: "bookkeeping-empty-guide-icon" });
-    setIcon(icon, "wallet-cards");
+    icon.createEl("img", { attr: { src: this.plugin.pluginLogoUrl(), alt: "Easy Bookkeeping Logo" } });
     guide.createEl("h3", { text: "开始建立你的第一笔账目" });
-    guide.createEl("p", { text: "可以直接记一笔，也可以从其他记账软件导出的CSV开始。所有数据都会保存在本地Markdown中。" });
     const actions = guide.createDiv({ cls: "bookkeeping-empty-guide-actions" });
     new ButtonComponent(actions).setButtonText("记第一笔").setCta().onClick(() => this.plugin.openEntry(false, null, undefined, this.month));
     new ButtonComponent(actions).setButtonText("导入CSV文件").onClick(() => this.plugin.openCsvImporter());
@@ -272,20 +335,20 @@ export class DashboardView extends ItemView {
   private restoreScroll(scrollTop: number, tableScrollLeft: number, anchors: Array<{ id: string; offset: number }>, preferredSelector: string, preferredOffset: number | null, version: number): void {
     window.requestAnimationFrame(() => {
       if (version !== this.renderVersion) return;
-      this.contentEl.scrollTop = scrollTop;
+      this.setScrollTop(scrollTop);
       const wrapper = this.contentEl.querySelector<HTMLElement>(".bookkeeping-table-wrapper");
       if (wrapper) wrapper.scrollLeft = tableScrollLeft;
       const contentTop = this.contentEl.getBoundingClientRect().top;
       const preferred = preferredSelector ? this.contentEl.querySelector<HTMLElement>(preferredSelector) : null;
       if (preferred && preferredOffset !== null) {
-        this.contentEl.scrollTop += preferred.getBoundingClientRect().top - contentTop - preferredOffset;
+        this.scrollBy(preferred.getBoundingClientRect().top - contentTop - preferredOffset);
         this.updateFloatingBackToTop();
         return;
       }
       for (const anchor of anchors) {
         const row = Array.from(this.contentEl.querySelectorAll<HTMLElement>("tr[data-transaction-id]")).find((candidate) => candidate.dataset.transactionId === anchor.id);
         if (!row) continue;
-        this.contentEl.scrollTop += row.getBoundingClientRect().top - contentTop - anchor.offset;
+        this.scrollBy(row.getBoundingClientRect().top - contentTop - anchor.offset);
         break;
       }
       this.updateFloatingBackToTop();
@@ -313,7 +376,7 @@ export class DashboardView extends ItemView {
     if (action === "export") return { label: "导出CSV文件", icon: "download", run: () => this.plugin.openCsvExporter(this.month, this.currentFilteredIds()) };
     if (action === "import") return { label: "导入CSV文件", icon: "upload", run: () => this.plugin.openCsvImporter() };
     if (action === "period") return { label: "年度统计", icon: "chart-no-axes-combined", run: () => this.plugin.openPeriodStats(this.month) };
-    if (action === "refresh") return { label: "重新扫描", icon: "refresh-cw", run: () => void this.plugin.refreshDashboards().then(() => this.plugin.notice("仪表盘已刷新")) };
+    if (action === "refresh") return { label: "重新扫描", icon: "refresh-cw", run: () => void this.plugin.restartPlugin() };
     if (action === "tags") return { label: "标签批量管理", icon: "tags", run: () => this.plugin.openTagManager() };
     return { label: "插件设置", icon: "settings", run: () => this.plugin.openPluginSettings() };
   }
@@ -654,11 +717,21 @@ export class DashboardView extends ItemView {
       const hasData = daysWithData.has(day);
       const state = value > 0 ? " is-positive" : value < 0 ? " is-negative" : hasData ? " is-zero-with-data" : " is-no-data";
       const cell = calendar.createDiv({ cls: `bookkeeping-calendar-day${state}` });
+      const isoDate = `${this.month}-${String(day).padStart(2, "0")}`;
+      cell.setAttribute("role", "button");
+      cell.setAttribute("tabindex", "0");
+      cell.setAttribute("aria-label", `${this.displayDate(isoDate)}账目筛选`);
+      cell.addEventListener("click", () => this.toggleCalendarDateFilter(isoDate));
+      cell.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        this.toggleCalendarDateFilter(isoDate);
+      });
       cell.createSpan({ cls: "bookkeeping-calendar-date", text: String(day) });
       const formatted = this.formatCalendarAmount(value);
       if (formatted.hasUnit) cell.addClass("has-unit");
       cell.createSpan({ cls: "bookkeeping-calendar-value", text: value === 0 ? (hasData ? "0" : "—") : formatted.text });
-      cell.setAttribute("title", `${this.displayDate(`${this.month}-${String(day).padStart(2, "0")}`)}：${this.money(value)}`);
+      cell.setAttribute("title", `${this.displayDate(isoDate)}：${this.money(value)}`);
     }
     const legend = parent.createDiv({ cls: "bookkeeping-calendar-legend" });
     legend.createSpan({ text: "支出", cls: "is-negative" });
@@ -758,11 +831,10 @@ export class DashboardView extends ItemView {
       const fill = track.createDiv({ cls: `bookkeeping-progress-fill${tone}` });
       fill.toggleClass("is-zero", Math.abs(value) < 0.005);
       fill.setCssStyles({ width: `${Math.abs(value) / max * 100}%` });
+      row.dataset.tagSummary = tag;
       row.addEventListener("click", () => {
+        this.preferredScrollAnchor = `[data-tag-summary="${CSS.escape(tag)}"]`;
         this.toggleTagFilter(tag);
-        this.showAdvancedFilters = true;
-        this.openMultiFilter = "tags";
-        this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
         void this.render();
       });
     }
@@ -771,7 +843,7 @@ export class DashboardView extends ItemView {
   private renderBudgets(parent: HTMLElement, byCategory: Map<string, number>, total: number): void {
     const budgets = Object.entries(this.plugin.settings.monthlyBudgets).filter(([, amount]) => amount > 0);
     if (!budgets.length) {
-      parent.createDiv({ cls: "bookkeeping-empty", text: "尚未设置预算，点击右上角修改按钮添加。" });
+      parent.createDiv({ cls: "bookkeeping-empty", text: "尚未设置预算" });
       return;
     }
     for (const [category, budget] of budgets) {
@@ -821,14 +893,13 @@ export class DashboardView extends ItemView {
     search.addEventListener("input", () => {
       this.filters.keyword = search.value;
       window.clearTimeout(Number(search.dataset.timer ?? 0));
-      search.dataset.timer = String(window.setTimeout(() => { this.preferredScrollAnchor = ".bookkeeping-filter-toggle"; void this.render(); }, 180));
+      search.dataset.timer = String(window.setTimeout(() => { void this.render(); }, 180));
     });
     const hasFilters = this.hasActiveFilters();
     if (hasFilters) {
       const clear = filters.createEl("button", { cls: "bookkeeping-filter-clear mod-warning", text: "清空筛选", attr: { type: "button" } });
       clear.addEventListener("click", () => {
-        this.filters = { types: [], necessities: [], categories: [], accounts: [], keyword: "", amountMin: "", amountMax: "", dateFrom: "", dateTo: "", tags: "", crossMonth: false };
-        this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
+        this.filters = emptyDashboardFilters();
         void this.render();
       });
     }
@@ -837,8 +908,8 @@ export class DashboardView extends ItemView {
     setIcon(filterIcon, "list-filter");
     advanced.createSpan({ text: "筛选" });
     advanced.addEventListener("click", () => {
-      this.showAdvancedFilters = !this.showAdvancedFilters;
       this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
+      this.showAdvancedFilters = !this.showAdvancedFilters;
       void this.render();
     });
     if (this.showAdvancedFilters) {
@@ -866,7 +937,6 @@ export class DashboardView extends ItemView {
       crossMonth.createSpan({ text: "跨月筛选全部账目" });
       const toggleCrossMonth = (): void => {
         this.filters.crossMonth = !this.filters.crossMonth;
-        this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
         void this.render();
       };
       crossMonth.addEventListener("click", (event) => {
@@ -886,13 +956,13 @@ export class DashboardView extends ItemView {
       amountPair.createEl("span", { text: "金额范围" });
       const amountInputs = amountPair.createDiv();
       this.filterAmountInput(amountInputs, "最小金额（含）", this.filters.amountMin, "min");
-      amountInputs.createSpan({ text: "—" });
+      amountInputs.createSpan({ cls: "bookkeeping-filter-range-separator", attr: { "aria-hidden": "true" } });
       this.filterAmountInput(amountInputs, "最大金额（含）", this.filters.amountMax, "max");
       const datePair = rangeGrid.createDiv({ cls: "bookkeeping-filter-pair" });
       datePair.createEl("span", { text: "日期范围" });
       const dateInputs = datePair.createDiv();
       this.filterDateInput(dateInputs, "起始日期（含）", this.filters.dateFrom, "from");
-      dateInputs.createSpan({ text: "—" });
+      dateInputs.createSpan({ cls: "bookkeeping-filter-range-separator", attr: { "aria-hidden": "true" } });
       this.filterDateInput(dateInputs, "结束日期（含）", this.filters.dateTo, "to");
     }
   }
@@ -994,7 +1064,6 @@ export class DashboardView extends ItemView {
       }
       onChange(draft.size === options.length ? [] : [...draft]);
       this.openMultiFilter = null;
-      this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
       void this.render();
     });
     details.addEventListener("toggle", () => {
@@ -1025,7 +1094,6 @@ export class DashboardView extends ItemView {
     clear.addEventListener("click", () => {
       if (edge === "min") this.filters.amountMin = "";
       else this.filters.amountMax = "";
-      this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
       void this.render();
     });
     input.addEventListener("change", () => {
@@ -1043,7 +1111,6 @@ export class DashboardView extends ItemView {
       }
       if (edge === "min") this.filters.amountMin = next;
       else this.filters.amountMax = next;
-      this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
       void this.render();
     });
   }
@@ -1052,17 +1119,35 @@ export class DashboardView extends ItemView {
     const control = parent.createDiv({ cls: "bookkeeping-range-control" });
     control.createSpan({ text: placeholder, cls: "bookkeeping-range-control-label" });
     const wrap = control.createDiv({ cls: "bookkeeping-range-input-wrap" });
-    const input = wrap.createEl("input", { type: "date", value, attr: { "aria-label": placeholder, lang: this.plugin.settings.language } });
+    const input = wrap.createEl("input", { type: "text", value, placeholder: "YYYY-MM-DD", attr: { "aria-label": placeholder, inputmode: "numeric", autocomplete: "off" } });
     const clear = wrap.createEl("button", { cls: "clickable-icon bookkeeping-range-clear", attr: { type: "button", "aria-label": `清空${placeholder}`, title: `清空${placeholder}` } });
     setIcon(clear, "delete");
+    input.addEventListener("beforeinput", (event) => {
+      if (!event.data || !/^\d+$/.test(event.data)) return;
+      if (input.value.includes("-") && input.value.length === 10 && input.selectionStart === input.selectionEnd) input.value = "";
+    });
+    input.addEventListener("input", () => {
+      if (!/^\d[\d-]*$/.test(input.value)) return;
+      const next = normalizeTypedDateInput(input.value);
+      if (next === input.value) return;
+      input.value = next;
+      input.setSelectionRange(next.length, next.length);
+    });
     clear.addEventListener("click", () => {
       if (edge === "from") this.filters.dateFrom = "";
       else this.filters.dateTo = "";
-      this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
       void this.render();
     });
     input.addEventListener("change", () => {
-      const normalized = input.value;
+      input.value = completeTypedDateInput(input.value);
+      const normalizedDate = input.value ? normalizeDate(input.value) : null;
+      if (input.value && !normalizedDate) {
+        input.value = value;
+        this.plugin.notice("请输入有效日期，例如 2026-08-16");
+        return;
+      }
+      const normalized = normalizedDate ?? "";
+      input.value = normalized;
       const other = edge === "from" ? this.filters.dateTo : this.filters.dateFrom;
       if (normalized && other && (edge === "from" ? normalized > other : normalized < other)) {
         input.value = value;
@@ -1071,14 +1156,18 @@ export class DashboardView extends ItemView {
       }
       if (edge === "from") this.filters.dateFrom = normalized;
       else this.filters.dateTo = normalized;
-      this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
       void this.render();
     });
   }
 
   private hasActiveFilters(): boolean {
     return this.filters.types.length > 0 || this.filters.necessities.length > 0 || this.filters.categories.length > 0 || this.filters.accounts.length > 0
-      || this.filters.crossMonth || Boolean(this.filters.keyword || this.filters.amountMin || this.filters.amountMax || this.filters.dateFrom || this.filters.dateTo || this.filters.tags);
+      || this.filters.crossMonth || Boolean(this.filters.keyword || this.filters.amountMin || this.filters.amountMax || this.filters.dateFrom || this.filters.dateTo || this.filters.tags || this.filters.calendarDate);
+  }
+
+  private toggleCalendarDateFilter(date: string): void {
+    this.filters.calendarDate = this.filters.calendarDate === date ? "" : date;
+    void this.render();
   }
 
   private selectedFilterTags(): string[] {
@@ -1111,6 +1200,7 @@ export class DashboardView extends ItemView {
       if (excluded !== "accounts" && this.isTableColumnVisible("account") && this.filters.accounts.length && !this.filters.accounts.includes(item.account) && !this.filters.accounts.includes(item.targetAccount)) return false;
       if (minAmount !== null && Number.isFinite(minAmount) && item.amount < minAmount) return false;
       if (maxAmount !== null && Number.isFinite(maxAmount) && item.amount > maxAmount) return false;
+      if (this.filters.calendarDate && item.date !== this.filters.calendarDate) return false;
       if (this.filters.dateFrom && item.date < this.filters.dateFrom) return false;
       if (this.filters.dateTo && item.date > this.filters.dateTo) return false;
       if (excluded !== "tags" && requiredTags.length) {
@@ -1304,16 +1394,16 @@ export class DashboardView extends ItemView {
     const table = wrapper.createEl("table", { cls: "bookkeeping-table" });
     const colgroup = table.createEl("colgroup");
     const selectCol = colgroup.createEl("col", { cls: "bookkeeping-select-column-col" });
-    selectCol.setCssStyles({ width: "40px", minWidth: "40px", maxWidth: "40px" });
+    const selectColumnWidth = 24;
+    selectCol.setCssStyles({ width: `${selectColumnWidth}px`, minWidth: `${selectColumnWidth}px`, maxWidth: `${selectColumnWidth}px` });
     for (const column of columns) {
       const col = colgroup.createEl("col");
       col.dataset.column = column;
       this.applyStoredColumnWidth(col, column);
     }
-    if (columns.every((column) => Number.isFinite(this.plugin.settings.tableColumnWidths[column]))) {
-      const fixedWidth = 40 + columns.reduce((sum, column) => sum + (this.plugin.settings.tableColumnWidths[column] ?? this.columnMinimumWidth(column)), 0);
-      table.setCssStyles({ width: `${fixedWidth}px`, minWidth: `${fixedWidth}px`, maxWidth: `${fixedWidth}px`, tableLayout: "fixed" });
-    }
+    colgroup.createEl("col", { cls: "bookkeeping-table-fill-column-col" });
+    const fixedWidth = selectColumnWidth + columns.reduce((sum, column) => sum + this.effectiveColumnWidth(column), 0);
+    table.setCssStyles({ width: `max(100%, ${fixedWidth}px)`, minWidth: `${fixedWidth}px`, maxWidth: "none", tableLayout: "fixed" });
     const head = table.createEl("thead").createEl("tr");
     const selectAllCell = head.createEl("th", { cls: "bookkeeping-select-column" });
     const selectAll = selectAllCell.createEl("input", { type: "checkbox", attr: { "aria-label": "选择全部可见账目" } });
@@ -1322,13 +1412,19 @@ export class DashboardView extends ItemView {
     selectAll.addEventListener("change", () => {
       if (selectAll.checked) items.forEach((item) => this.selectedIds.add(item.id));
       else items.forEach((item) => this.selectedIds.delete(item.id));
-      void this.render();
+      body.querySelectorAll<HTMLTableRowElement>("tr[data-transaction-id]").forEach((row) => {
+        const id = row.dataset.transactionId ?? "";
+        row.toggleClass("is-selected", this.selectedIds.has(id));
+        const rowCheckbox = row.querySelector<HTMLInputElement>(".bookkeeping-select-column input[type='checkbox']");
+        if (rowCheckbox) rowCheckbox.checked = this.selectedIds.has(id);
+      });
     });
     for (const column of columns) this.renderTableHeader(head, column);
+    head.createEl("th", { cls: "bookkeeping-table-fill-cell", attr: { "aria-hidden": "true" } });
     const body = table.createEl("tbody");
     if (!items.length) {
       const emptyRow = body.createEl("tr", { cls: "bookkeeping-table-empty-row" });
-      const emptyCell = emptyRow.createEl("td", { cls: "bookkeeping-table-empty-cell", attr: { colspan: String(columns.length + 1) } });
+      const emptyCell = emptyRow.createEl("td", { cls: "bookkeeping-table-empty-cell", attr: { colspan: String(columns.length + 2) } });
       emptyCell.createDiv({ cls: "bookkeeping-table-empty-message", text: "没有符合条件的账目" });
     }
     for (const item of items) {
@@ -1341,9 +1437,11 @@ export class DashboardView extends ItemView {
       checkbox.addEventListener("change", () => {
         if (checkbox.checked) this.selectedIds.add(item.id);
         else this.selectedIds.delete(item.id);
-        void this.render();
+        row.toggleClass("is-selected", checkbox.checked);
+        selectAll.checked = items.length > 0 && items.every((visibleItem) => this.selectedIds.has(visibleItem.id));
       });
       for (const column of columns) this.renderTableCell(row, column, item);
+      row.createEl("td", { cls: "bookkeeping-table-fill-cell", attr: { "aria-hidden": "true" } });
     }
     const scrollbars = [topScroll, bottomScroll];
     let maximum = 0;
@@ -1374,9 +1472,11 @@ export class DashboardView extends ItemView {
       wrapper.scrollLeft = thumbOffset / travel * maximum;
     };
     const bindScrollbar = ({ track, thumb }: { track: HTMLDivElement; thumb: HTMLDivElement }): void => {
+      track.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
       track.addEventListener("pointerdown", (event) => {
         if (maximum <= 0) return;
         event.preventDefault();
+        event.stopPropagation();
         const targetIsThumb = event.target instanceof Node && thumb.contains(event.target);
         const thumbRect = thumb.getBoundingClientRect();
         const grabOffset = targetIsThumb ? event.clientX - thumbRect.left : thumbRect.width / 2;
@@ -1565,18 +1665,38 @@ export class DashboardView extends ItemView {
   }
 
   private applyStoredColumnWidth(cell: HTMLElement, column: TableColumn): void {
-    const stored = this.plugin.settings.tableColumnWidths[column];
-    if (typeof stored !== "number" || !Number.isFinite(stored)) return;
-    const migrated = column === "date" && [96, 82].includes(Math.round(stored)) ? 70 : Math.round(stored);
-    const width = Math.max(this.columnMinimumWidth(column), Math.min(480, migrated));
-    if (width !== stored) this.plugin.settings.tableColumnWidths[column] = width;
-
+    const width = this.effectiveColumnWidth(column);
     cell.setCssStyles({ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` });
+  }
+
+  private effectiveColumnWidth(column: TableColumn): number {
+    const stored = this.plugin.settings.tableColumnWidths[column];
+    if (typeof stored === "number" && Number.isFinite(stored)) return this.normalizeColumnWidth(column, stored);
+    const defaults: Record<TableColumn, number> = {
+      date: 58,
+      title: 128,
+      type: 58,
+      necessity: 68,
+      category: 72,
+      account: 76,
+      amount: 86,
+      note: 128,
+      tags: 82,
+      attachments: 88,
+      actions: 72
+    };
+    return defaults[column];
+  }
+
+  private normalizeColumnWidth(column: TableColumn, width: number): number {
+    const rounded = Math.round(width);
+    const migrated = column === "date" && [96, 82, 70, 64].includes(rounded) ? 58 : rounded;
+    return Math.max(this.columnMinimumWidth(column), Math.min(480, migrated));
   }
 
   private columnMinimumWidth(column: TableColumn): number {
     const widths: Record<TableColumn, number> = {
-      date: 70,
+      date: 58,
       title: 48,
       type: 54,
       necessity: 68,
@@ -1600,21 +1720,20 @@ export class DashboardView extends ItemView {
       const startX = event.clientX;
       const startWidth = cell.getBoundingClientRect().width;
       const table = cell.closest("table");
-      let startTableWidth = table?.getBoundingClientRect().width ?? 0;
+      let frozenContentWidth = table?.getBoundingClientRect().width ?? 0;
       if (table) {
-        let frozenTableWidth = table.querySelector<HTMLElement>(".bookkeeping-select-column")?.getBoundingClientRect().width ?? 40;
+        frozenContentWidth = table.querySelector<HTMLElement>(".bookkeeping-select-column")?.getBoundingClientRect().width ?? 24;
         table.querySelectorAll<HTMLTableCellElement>("thead th[data-column]").forEach((header) => {
           const frozenWidth = Math.round(header.getBoundingClientRect().width);
           const frozenColumn = header.dataset.column as TableColumn | undefined;
           if (!frozenColumn) return;
-          frozenTableWidth += frozenWidth;
-          this.plugin.settings.tableColumnWidths[frozenColumn] = frozenWidth;
+          frozenContentWidth += frozenWidth;
           table.querySelectorAll<HTMLElement>(`[data-column="${frozenColumn}"]`).forEach((element) => {
             element.setCssStyles({ width: `${frozenWidth}px`, minWidth: `${frozenWidth}px`, maxWidth: `${frozenWidth}px` });
           });
         });
-        startTableWidth = Math.round(frozenTableWidth);
-        table.setCssStyles({ width: `${startTableWidth}px`, minWidth: `${startTableWidth}px`, maxWidth: `${startTableWidth}px`, tableLayout: "fixed" });
+        frozenContentWidth = Math.round(frozenContentWidth);
+        table.setCssStyles({ width: `max(100%, ${frozenContentWidth}px)`, minWidth: `${frozenContentWidth}px`, maxWidth: "none", tableLayout: "fixed" });
       }
       handle.setPointerCapture(event.pointerId);
       document.body.addClass("bookkeeping-is-resizing-column");
@@ -1627,9 +1746,8 @@ export class DashboardView extends ItemView {
         });
         this.plugin.settings.tableColumnWidths[column] = width;
         if (table) {
-          const nextTableWidth = Math.round(startTableWidth + width - startWidth);
-
-          table.setCssStyles({ width: `${nextTableWidth}px`, minWidth: `${nextTableWidth}px`, maxWidth: `${nextTableWidth}px` });
+          const nextContentWidth = Math.round(frozenContentWidth + width - startWidth);
+          table.setCssStyles({ width: `max(100%, ${nextContentWidth}px)`, minWidth: `${nextContentWidth}px`, maxWidth: "none" });
         }
       };
       const end = (): void => {
@@ -1899,7 +2017,7 @@ export class DashboardView extends ItemView {
   }
 
   private collectTags(items: Transaction[]): string[] {
-    return [...new Set(items.flatMap((item) => this.customTags(item)))].sort((a, b) => a.localeCompare(b, "zh-CN"));
+    return [...new Set([...this.plugin.settings.customTags, ...items.flatMap((item) => this.customTags(item))])].sort((a, b) => a.localeCompare(b, "zh-CN"));
   }
 
   private customTags(item: Transaction): string[] {

@@ -583,7 +583,7 @@ export class TransactionStore {
       ...(draft.type === "转账" ? { "目标账户": draft.targetAccount } : {}),
       "内容": draft.title,
       "金额": roundMoney(draft.amount),
-      "算式": this.normalizedExpression(draft),
+      ...(this.getSettings().saveExpressionInNote ? { "算式": this.normalizedExpression(draft) } : {}),
       "备注": this.storedNote(draft),
       "tags": ["记账", ...draft.tags.filter((tag) => tag !== "记账")],
       ...(draft.attachments.length ? { "附件": draft.attachments } : {})

@@ -1,9 +1,9 @@
 {
   "id": "easy-bookkeeping",
   "name": "Easy Bookkeeping",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "minAppVersion": "1.13.0",
-  "description": "A local-first bookkeeping plugin with fast keyboard entry, mobile forms, configurable dashboards, and Markdown-based records.",
+  "description": "本地优先的极简记账插件，支持键盘连续录入、移动表单、筛选导出和可配置仪表盘。 Local-first bookkeeping for Obsidian with fast entry, mobile forms, filters, export, and configurable dashboards.",
   "author": "北漠海",
   "authorUrl": "https://github.com/beimohai",
   "isDesktopOnly": false
