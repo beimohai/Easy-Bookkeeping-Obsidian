@@ -953,13 +953,13 @@ export class DashboardView extends ItemView {
       ranges.createEl("h4", { text: "范围筛选" });
       const rangeGrid = ranges.createDiv({ cls: "bookkeeping-filter-grid bookkeeping-filter-range-grid" });
       const amountPair = rangeGrid.createDiv({ cls: "bookkeeping-filter-pair" });
-      amountPair.createEl("span", { text: "金额范围" });
+      amountPair.createSpan({ text: "金额范围" });
       const amountInputs = amountPair.createDiv();
       this.filterAmountInput(amountInputs, "最小金额（含）", this.filters.amountMin, "min");
       amountInputs.createSpan({ cls: "bookkeeping-filter-range-separator", attr: { "aria-hidden": "true" } });
       this.filterAmountInput(amountInputs, "最大金额（含）", this.filters.amountMax, "max");
       const datePair = rangeGrid.createDiv({ cls: "bookkeeping-filter-pair" });
-      datePair.createEl("span", { text: "日期范围" });
+      datePair.createSpan({ text: "日期范围" });
       const dateInputs = datePair.createDiv();
       this.filterDateInput(dateInputs, "起始日期（含）", this.filters.dateFrom, "from");
       dateInputs.createSpan({ cls: "bookkeeping-filter-range-separator", attr: { "aria-hidden": "true" } });

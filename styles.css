@@ -1113,7 +1113,6 @@ body.is-mobile .bookkeeping-view-container {
   width: 100%;
   min-width: 0;
   padding: 0;
-  text-align: left;
   color: var(--text-normal);
   box-shadow: none;
   background: transparent;
@@ -1787,14 +1786,6 @@ body.is-mobile .bookkeeping-view-container {
   resize: vertical;
 }
 
-.bookkeeping-entry-modal input[type="time"] {
-  padding: 0 10px;
-  border: 1px solid color-mix(in srgb, var(--interactive-accent) 24%, var(--background-modifier-border));
-  border-radius: var(--input-radius);
-  background: color-mix(in srgb, var(--interactive-accent) 6%, var(--background-secondary));
-  font-variant-numeric: tabular-nums;
-}
-
 body .bookkeeping-modal.bookkeeping-entry-modal input[type="time"],
 body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"] {
   position: relative;
@@ -1832,6 +1823,45 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"] {
 .bookkeeping-entry-modal .bookkeeping-datetime-icon svg {
   width: 16px;
   height: 16px;
+}
+
+.bookkeeping-entry-modal .bookkeeping-datetime-value {
+  display: none;
+}
+
+body:not(.is-mobile) .bookkeeping-entry-modal .bookkeeping-datetime-value {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 38px;
+  display: block;
+  max-width: calc(100% - 48px);
+  overflow: hidden;
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+body:not(.is-mobile) .bookkeeping-entry-modal .bookkeeping-datetime-setting input[type="time"],
+body:not(.is-mobile) .bookkeeping-entry-modal .bookkeeping-datetime-setting input[type="date"] {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+body:not(.is-mobile) .bookkeeping-entry-modal .bookkeeping-datetime-setting .setting-item-control:focus-within .bookkeeping-datetime-value {
+  visibility: hidden;
+}
+
+body:not(.is-mobile) .bookkeeping-entry-modal .bookkeeping-datetime-setting .setting-item-control:focus-within input[type="time"],
+body:not(.is-mobile) .bookkeeping-entry-modal .bookkeeping-datetime-setting .setting-item-control:focus-within input[type="date"] {
+  color: var(--text-normal);
+  -webkit-text-fill-color: var(--text-normal);
 }
 
 body .bookkeeping-modal.bookkeeping-entry-modal input[type="time"]::-webkit-datetime-edit,
@@ -2087,7 +2117,7 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
     grid-template-columns: 72px minmax(0, 1fr);
     align-items: center;
     flex-direction: initial;
-    column-gap: 10px;
+    gap: 0 10px;
     min-height: 46px;
   }
 
@@ -3294,7 +3324,7 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
 .bookkeeping-filter-pair > div {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  column-gap: 6px;
+  gap: 0 6px;
 }
 
 .bookkeeping-range-control {
@@ -4037,8 +4067,7 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
 
 .bookkeeping-filter-pair > div {
   align-items: center;
-  gap: 5px;
-  column-gap: 6px;
+  gap: 5px 6px;
 }
 
 .bookkeeping-filter-pair > div > span {
@@ -5109,8 +5138,7 @@ body.is-mobile .bookkeeping-select-column input,
     display: grid;
     grid-template-columns: 72px minmax(0, 1fr);
     align-items: center;
-    column-gap: 10px;
-    row-gap: 4px;
+    gap: 4px 10px;
     min-height: 46px;
     margin: 0;
     padding: 7px 0;

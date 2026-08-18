@@ -156,7 +156,7 @@ const EN: Record<string, string> = {
   "版本号": "Version",
   "最近更新": "Last updated",
   "更新日期": "Updated",
-  "更新日期：2026-08-17": "Updated: 2026-08-17",
+  "更新日期：2026-08-18": "Updated: 2026-08-18",
   "本项目基于 MIT License 开源": "Open source under the MIT License",
   "拖动排序": "Drag to reorder",
   "切换表头显示": "Toggle column visibility",

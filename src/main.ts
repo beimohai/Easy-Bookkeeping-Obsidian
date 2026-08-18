@@ -73,17 +73,17 @@ export default class BookkeepingPlugin extends Plugin {
       window.clearTimeout(this.ribbonCaptureTimer);
       this.ribbonCaptureTimer = window.setTimeout(() => this.captureRibbonPosition(), 0);
     });
-    this.addCommand({ id: "open-dashboard", name: this.t("Easy Bookkeeping：打开仪表盘"), callback: () => void this.openDashboard() });
-    this.addCommand({ id: "add-transaction", name: this.t("Easy Bookkeeping：开始记账"), hotkeys: [{ modifiers: ["Mod", "Shift"], key: "N" }], callback: () => this.openEntry(false) });
-    this.addCommand({ id: "keyboard-entry", name: this.t("Easy Bookkeeping：桌面版全键盘连续记账"), callback: () => this.openKeyboardEntry() });
-    this.addCommand({ id: "mobile-entry", name: this.t("Easy Bookkeeping：手机端表单记账"), callback: () => this.openMobileEntry(false) });
+    this.addCommand({ id: "open-dashboard", name: this.t("打开仪表盘"), callback: () => void this.openDashboard() });
+    this.addCommand({ id: "add-transaction", name: this.t("开始记账"), callback: () => this.openEntry(false) });
+    this.addCommand({ id: "keyboard-entry", name: this.t("桌面版全键盘连续记账"), callback: () => this.openKeyboardEntry() });
+    this.addCommand({ id: "mobile-entry", name: this.t("手机端表单记账"), callback: () => this.openMobileEntry(false) });
     this.addCommand({ id: "convert-legacy-files", name: this.t("转换旧版账目为新版Properties"), callback: () => this.openLegacyConverter() });
-    this.addCommand({ id: "import-csv", name: this.t("Easy Bookkeeping：导入CSV文件"), callback: () => this.openCsvImporter() });
-    this.addCommand({ id: "manage-tags", name: this.t("Easy Bookkeeping：标签批量管理"), callback: () => this.openTagManager() });
-    this.addCommand({ id: "period-statistics", name: this.t("Easy Bookkeeping：查看年度统计"), callback: () => this.openPeriodStats(currentMonth()) });
+    this.addCommand({ id: "import-csv", name: this.t("导入CSV文件"), callback: () => this.openCsvImporter() });
+    this.addCommand({ id: "manage-tags", name: this.t("标签批量管理"), callback: () => this.openTagManager() });
+    this.addCommand({ id: "period-statistics", name: this.t("查看年度统计"), callback: () => this.openPeriodStats(currentMonth()) });
     this.addCommand({
       id: "export-csv",
-      name: this.t("Easy Bookkeeping：导出CSV文件"),
+      name: this.t("导出CSV文件"),
       callback: () => this.openCsvExporter()
     });
     this.addSettingTab(new BookkeepingSettingTab(this.app, this));
@@ -801,9 +801,11 @@ class TagManagerModal extends Modal {
       row.createSpan({ text: String(count), cls: "bookkeeping-tag-manager-count" }).createSpan({ text: "笔" });
       const renameButton = new ButtonComponent(row).setButtonText("重命名");
       renameButton.buttonEl.addClass("bookkeeping-tag-rename-button");
+      let isRenaming = false;
       renameButton.onClick(() => {
-        if (renameButton.buttonEl.hasClass("mod-warning")) return void this.renderTags();
-        renameButton.setButtonText("取消重命名").setWarning();
+        if (isRenaming) return void this.renderTags();
+        isRenaming = true;
+        renameButton.setButtonText("取消重命名").setDestructive();
         nameWrap.empty();
         nameWrap.createSpan({ text: "#", cls: "bookkeeping-tag-prefix" });
         const input = nameWrap.createEl("input", { type: "text", value: tag, attr: { "aria-label": `重命名${tag}` } });

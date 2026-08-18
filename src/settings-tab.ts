@@ -10,6 +10,8 @@ import { LANGUAGE_OPTIONS } from "./locales";
 import { formatDateDisplay, formatMonthDisplay } from "./utils";
 import { bindPointerSort } from "./pointer-sort";
 
+declare const __PLUGIN_VERSION__: string;
+
 type PresetGroup = "type" | "necessity" | "category" | "account";
 
 function toLanguage(value: string): Language {
@@ -315,8 +317,8 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     const details = footer.createDiv({ cls: "bookkeeping-plugin-footer-details" });
     details.createEl("a", { text: "Easy Bookkeeping", attr: { href: PROJECT_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: "作者：北漠海", attr: { href: BILIBILI_URL, target: "_blank", rel: "noopener" } });
-    details.createEl("a", { text: `版本号：${this.plugin.manifest.version}`, attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
-    details.createEl("a", { text: "更新日期：2026-08-17", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
+    details.createEl("a", { text: `版本号：${__PLUGIN_VERSION__}`, attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
+    details.createEl("a", { text: "更新日期：2026-08-18", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
     footer.createDiv({ text: "本项目基于 MIT License 开源", cls: "bookkeeping-plugin-footer-license" });
   }
 

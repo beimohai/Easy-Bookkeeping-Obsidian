@@ -33,10 +33,14 @@ export class TransactionModal extends Modal {
     timeSetting.settingEl.addClass("bookkeeping-datetime-setting");
     const timeIcon = timeSetting.controlEl.createSpan({ cls: "bookkeeping-datetime-icon", attr: { "aria-hidden": "true" } });
     setIcon(timeIcon, "clock");
+    const timeValue = timeSetting.controlEl.createSpan({ cls: "bookkeeping-datetime-value", text: this.draft.time, attr: { "aria-hidden": "true" } });
     timeSetting.addText((text) => {
       text.inputEl.type = "time";
       text.inputEl.lang = this.settings.language;
-      text.setValue(this.draft.time).onChange((value) => this.draft.time = value);
+      text.setValue(this.draft.time).onChange((value) => {
+        this.draft.time = value;
+        timeValue.setText(value);
+      });
     });
 
     let categoryDropdown: DropdownComponent | null = null;
@@ -53,10 +57,14 @@ export class TransactionModal extends Modal {
         dateSetting.settingEl.addClass("bookkeeping-datetime-setting");
         const dateIcon = dateSetting.controlEl.createSpan({ cls: "bookkeeping-datetime-icon", attr: { "aria-hidden": "true" } });
         setIcon(dateIcon, "calendar-days");
+        const dateValue = dateSetting.controlEl.createSpan({ cls: "bookkeeping-datetime-value", text: this.displayPickerDate(this.draft.date), attr: { "aria-hidden": "true" } });
         dateSetting.addText((text) => {
           text.inputEl.type = "date";
           text.inputEl.lang = this.settings.language;
-          text.setPlaceholder("请输入日期").setValue(this.draft.date).onChange((value) => this.draft.date = value);
+          text.setPlaceholder("请输入日期").setValue(this.draft.date).onChange((value) => {
+            this.draft.date = value;
+            dateValue.setText(this.displayPickerDate(value));
+          });
         });
       } else if (field === "account") {
         const setting = new Setting(content).setName("账户");
@@ -226,6 +234,10 @@ export class TransactionModal extends Modal {
     const next = categories.includes(previous) ? previous : categories.includes(configuredDefault) ? configuredDefault : (categories[0] ?? "其他");
     this.draft.category = next;
     dropdown.setValue(next);
+  }
+
+  private displayPickerDate(value: string): string {
+    return value.replace(/-/g, "/");
   }
 
   private renderAttachmentUploader(content: HTMLElement): void {

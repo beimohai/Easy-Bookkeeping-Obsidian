@@ -1,5 +1,17 @@
 # 更新日志 Changelog
 
+* [V2.0.7](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.7) 2026-08-18
+  * 修复与审核兼容
+    * 修复电脑端编辑账目中时间与日期文字起点不一致的问题，保持手机端及其他界面不变。
+    * 移除 manifest 描述中的冗余产品名，改用 DOM helper，取消默认全局快捷键并移除快捷键命令名称中重复的插件名前缀，同时将弃用的警告按钮 API 更新为破坏性按钮 API。
+    * 等价合并四处网格间距声明并移除重复样式，不改变现有布局；设置页底部版本号改为随 manifest 构建时自动同步，并同步更新日期、Release notes 和版本兼容表。
+    * 保留账目目录枚举和自定义设置页 `display()`：前者涉及文件发现范围，后者需要重建设置页，无法保证行为与样式完全不变。
+  * Fixes and review compatibility
+    * Fixed mismatched desktop time/date text origins in the transaction editor while leaving mobile and other surfaces unchanged.
+    * Removed the redundant product name from the manifest description, adopted DOM helpers, removed the default global hotkey and duplicate plugin-name prefixes from hotkey command labels, and replaced the deprecated warning-button API with the destructive-button API.
+    * Consolidated four grid-gap declarations and removed a duplicate style without changing layout; made the settings-footer version follow the manifest automatically at build time, and synchronized its update date, release notes, and compatibility map.
+    * Kept ledger-folder enumeration and the custom settings-tab `display()` implementation because changing either cannot guarantee identical file discovery, behavior, and styling.
+
 * [V2.0.6](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.6) 2026-08-17
   * 录入与编辑体验
     * 录入字段排序扩展到日期、内容、金额、备注和附件，附件默认排在备注后，编辑面板按同一顺序展示并一次显示多个错误。
