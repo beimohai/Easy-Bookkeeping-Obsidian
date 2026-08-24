@@ -4,10 +4,13 @@ export type TransactionType = string;
 export type Necessity = string;
 export type EntryMode = "auto" | "desktop" | "mobile";
 export type OptionField = "account" | "type" | "necessity" | "category" | "attachments";
-export type EntryField = "date" | OptionField | "title" | "amount" | "note";
+export type BuiltinEntryField = "date" | OptionField | "title" | "amount" | "note";
+export type CustomFieldKey = `custom:${string}`;
+export type EntryField = BuiltinEntryField | CustomFieldKey;
 export type FilterPersistenceMode = "none" | "current" | "monthly";
 export type Language = "zh-CN" | "zh-TW" | "en" | "fr" | "ru" | "es" | "ar" | "ja" | "ko" | "de" | "pt" | "fa";
-export type TableColumn = "date" | "title" | "type" | "necessity" | "category" | "account" | "amount" | "note" | "tags" | "attachments" | "actions";
+export type BuiltinTableColumn = "date" | "title" | "type" | "necessity" | "category" | "account" | "amount" | "note" | "tags" | "attachments" | "actions";
+export type TableColumn = BuiltinTableColumn | CustomFieldKey;
 export type TrendMetric = "expense" | "income" | "net" | "balance";
 export type ChartType = "line" | "area" | "bar";
 export type PieMetric = "expenseCategory" | "incomeCategory" | "necessityExpense" | "accountExpense" | "accountIncome" | "accountBalance";
@@ -58,11 +61,42 @@ export interface AccountConfig {
   code: string;
 }
 
+export type CustomFieldKind = "text" | "select";
+
+export interface CustomFieldConfig {
+  id: string;
+  name: string;
+  property: string;
+  kind: CustomFieldKind;
+  options: string[];
+  optionCodes: Record<string, string>;
+  defaultValue: string;
+  initialOptions: string[];
+  initialOptionCodes: Record<string, string>;
+  initialDefaultValue: string;
+  enabled: boolean;
+}
+
+const RESERVED_TRANSACTION_PROPERTIES = new Set([
+  "记账插件", "账目ID", "时间", "日期", "时刻", "类型", "标签", "分类", "账户", "目标账户", "内容", "金额", "算式", "备注", "附件", "tags"
+].map((property) => property.toLocaleLowerCase("zh-CN")));
+
+export const isReservedTransactionProperty = (property: string): boolean => RESERVED_TRANSACTION_PROPERTIES.has(property.trim().toLocaleLowerCase("zh-CN"));
+
+export const customFieldDefaultValue = (field: CustomFieldConfig): string => field.kind === "select"
+  ? (field.options.includes(field.defaultValue) ? field.defaultValue : (field.options[0] ?? ""))
+  : "";
+
+export const customFieldKey = (id: string): CustomFieldKey => `custom:${id}`;
+export const isCustomFieldKey = (value: string): value is CustomFieldKey => value.startsWith("custom:");
+export const customFieldId = (key: CustomFieldKey): string => key.slice("custom:".length);
+
 export interface DashboardFilterState {
   types: TransactionType[];
   necessities: Necessity[];
   categories: string[];
   accounts: string[];
+  customFields: Record<string, string[]>;
   keyword: string;
   amountMin: string;
   amountMax: string;
@@ -89,6 +123,7 @@ export interface BookkeepingSettings {
   enableType: boolean;
   enableNecessity: boolean;
   enableNote: boolean;
+  customFields: CustomFieldConfig[];
   optionFieldOrder: EntryField[];
   categories: string[];
   incomeCategories: string[];
@@ -116,8 +151,8 @@ export interface BookkeepingSettings {
   allowEmptyAmount: boolean;
   tableColumnOrder: TableColumn[];
   visibleTableColumns: TableColumn[];
-  tableColumnLabels: Record<TableColumn, string>;
-  tableColumnWidths: Partial<Record<TableColumn, number>>;
+  tableColumnLabels: Record<string, string>;
+  tableColumnWidths: Partial<Record<string, number>>;
   chartConfigs: DashboardChartConfig[];
   annualChartConfigs: AnnualChartConfig[];
   showBudgetPanel: boolean;
@@ -165,6 +200,8 @@ export interface TransactionDraft {
   note: string;
   tags: string[];
   attachments: string[];
+  customValues: Record<string, string>;
+  customProperties?: Record<string, string>;
 }
 
 export interface Transaction extends TransactionDraft {
@@ -199,6 +236,7 @@ export const DEFAULT_SETTINGS: BookkeepingSettings = {
   enableType: true,
   enableNecessity: true,
   enableNote: true,
+  customFields: [],
   optionFieldOrder: ["date", "account", "type", "necessity", "category", "title", "amount", "note", "attachments"],
   categories: ["未分类", "餐饮", "交通", "购物", "居住", "医疗", "学习", "娱乐", "人情", "其他"],
   incomeCategories: ["工资", "奖金", "报销", "理财", "兼职", "其他收入"],
@@ -281,7 +319,7 @@ export const DEFAULT_SETTINGS: BookkeepingSettings = {
   savedDashboardAdvancedFilters: false,
   savedMonthlyDashboardAdvancedFilters: {},
   savedDashboardFilters: {
-    types: [], necessities: [], categories: [], accounts: [], keyword: "",
+    types: [], necessities: [], categories: [], accounts: [], customFields: {}, keyword: "",
     amountMin: "", amountMax: "", dateFrom: "", dateTo: "", tags: "", crossMonth: false, calendarDate: ""
   },
   savedMonthlyDashboardFilters: {},
@@ -299,7 +337,7 @@ export const OPTION_FIELD_LABELS: Record<OptionField, string> = {
   attachments: "附件"
 };
 
-export const ENTRY_FIELD_LABELS: Record<EntryField, string> = {
+export const ENTRY_FIELD_LABELS: Record<BuiltinEntryField, string> = {
   date: "日期",
   account: "账户",
   type: "类型",
@@ -311,7 +349,7 @@ export const ENTRY_FIELD_LABELS: Record<EntryField, string> = {
   note: "备注"
 };
 
-export const TABLE_COLUMN_LABELS: Record<TableColumn, string> = {
+export const TABLE_COLUMN_LABELS: Record<BuiltinTableColumn, string> = {
   date: "日期",
   title: "内容",
   type: "类型",

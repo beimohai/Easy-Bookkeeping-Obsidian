@@ -1,5 +1,33 @@
 # 更新日志 Changelog
 
+* [V2.0.8](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.8) 2026-08-24
+  * 自定义录入字段
+    * 新增内容型与分类型录入字段，可加入表单、全键盘连续记账、账目明细、搜索和筛选；内容型留空显示“无”，分类型留空使用默认值。
+    * 分类型预设与内置分类同级，支持默认录入值、唯一编号、拖动排序、新增删除及恢复到字段创建时的初始预设。
+    * 删除自定义字段时可选择仅删除配置，或同时清理历史 Markdown 属性，并统一删除按钮样式。
+  * CSV、跨月筛选与交互
+    * CSV 可选择附带完整录入字段配置；导入时可沿用当前配置，或经二次确认后启用附带配置并清理旧自定义属性。
+    * 任意筛选结果超过 100 笔时自动分页，避免一次渲染大量行；全选覆盖全部筛选结果，汇总统计不受当前页限制。
+    * 批量修改支持已启用的分类型录入字段；小型多选筛选的“清除筛选”会立即生效并收起面板。
+    * Markdown 保留“记账插件”属性作为账目格式标记，不再自动写入无实际用途的“记账”标签；编辑旧账目时会同步清除该自动标签。
+    * 手机端基础筛选选项面板改为跟随选择框，并避免滑动页面时误收起；手机输入框和选择框按控件高度与电脑端保持相同圆角比例。
+    * 日历、标签和账户图表触发筛选时会同步条件但不强制展开筛选面板；再次点击同一条件即可取消，日历日期会显示为当天到当天。
+    * 饼图和标签汇总改用当前账目明细的完整筛选结果；输入跨月日期范围时自动启用跨月筛选。
+    * 搜索支持所有自定义字段并兼容中文输入法组合输入；筛选、选择和分页重绘时保持当前页面位置。
+  * Custom entry fields
+    * Added text and select entry fields across forms, keyboard entry, transaction details, search, and filters. Empty text fields display “None,” while empty select fields use their configured default.
+    * Select presets now match built-in category presets with a default value, unique codes, drag sorting, add/remove actions, and restoration to the field's creation-time snapshot.
+    * Custom-field deletion can keep historical Markdown properties or remove them after confirmation, with delete-button styling aligned to the rest of the plugin.
+  * CSV, cross-month filters, and interaction
+    * CSV files can carry the full entry-field configuration. Import can keep the current configuration or enable the attached configuration after destructive confirmation and old-property cleanup.
+    * Any result set over 100 transactions now uses fixed pages instead of rendering every row at once. Select all covers the complete filtered result, and summary totals remain independent of the current page.
+    * Bulk edit now supports enabled custom select fields, and clearing a compact multi-select filter applies immediately and collapses its panel.
+    * Markdown keeps the “记账插件” property as the transaction-format marker and no longer writes the unused automatic “记账” tag. Editing older transactions removes that automatic tag.
+    * Mobile basic-filter option panels now stay below their controls and remain open while the page is scrolled. Mobile input and select corner radii now scale with control height to match desktop proportions.
+    * Calendar, tag, and account chart filters mirror their active values without forcing the filter panel open. Clicking the same value again clears it; calendar dates appear as a same-day range.
+    * Pie charts and tag summaries now use the complete filtered transaction-detail result. Entering a date range outside the displayed month automatically enables cross-month filtering.
+    * Search includes all custom fields, respects IME composition, and keeps the dashboard position stable across filter, selection, and pagination refreshes.
+
 * [V2.0.7](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.7) 2026-08-18
   * 修复与审核兼容
     * 修复电脑端编辑账目中时间与日期文字起点不一致的问题，保持手机端及其他界面不变。

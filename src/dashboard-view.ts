@@ -1,6 +1,7 @@
 import { App, ButtonComponent, ItemView, Menu, Modal, Platform, Setting, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type BookkeepingPlugin from "./main";
-import type { AccountConfig, BookkeepingSettings, CalendarMetric, ChartKind, ChartType, DashboardChartConfig, DashboardFilterState, HeaderAction, Necessity, PieMetric, TableColumn, TagMetric, TagSort, Transaction, TransactionDraft, TransactionType, TrendMetric } from "./types";
+import type { AccountConfig, BookkeepingSettings, CalendarMetric, ChartKind, ChartType, CustomFieldKey, DashboardChartConfig, DashboardFilterState, HeaderAction, Necessity, PieMetric, TableColumn, TagMetric, TagSort, Transaction, TransactionDraft, TransactionType, TrendMetric } from "./types";
+import { customFieldDefaultValue, customFieldId, customFieldKey, isCustomFieldKey } from "./types";
 import { currentMonth, errorMessageZh, evaluateAmount, formatDateDisplay, formatMoney, formatMonthDisplay, formatWeekdayLabels, monthOf, normalizeDate, roundMoney } from "./utils";
 import { bindPointerSort } from "./pointer-sort";
 
@@ -9,18 +10,24 @@ export const DASHBOARD_VIEW_TYPE = "bookkeeping-dashboard";
 type DashboardFilters = DashboardFilterState;
 
 const emptyDashboardFilters = (): DashboardFilters => ({
-  types: [], necessities: [], categories: [], accounts: [], keyword: "",
+  types: [], necessities: [], categories: [], accounts: [], customFields: {}, keyword: "",
   amountMin: "", amountMax: "", dateFrom: "", dateTo: "", tags: "", crossMonth: false, calendarDate: ""
 });
 
-const cloneDashboardFilters = (filters: DashboardFilters): DashboardFilters => ({
-  ...filters,
-  calendarDate: filters.calendarDate ?? "",
-  types: [...filters.types],
-  necessities: [...filters.necessities],
-  categories: [...filters.categories],
-  accounts: [...filters.accounts]
-});
+const cloneDashboardFilters = (filters: DashboardFilters): DashboardFilters => {
+  const calendarDate = filters.calendarDate ?? "";
+  return {
+    ...filters,
+    dateFrom: calendarDate || filters.dateFrom,
+    dateTo: calendarDate || filters.dateTo,
+    calendarDate: "",
+    types: [...filters.types],
+    necessities: [...filters.necessities],
+    categories: [...filters.categories],
+    accounts: [...filters.accounts],
+    customFields: Object.fromEntries(Object.entries(filters.customFields ?? {}).map(([id, values]) => [id, [...values]]))
+  };
+};
 
 function normalizeTypedDateInput(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 8);
@@ -36,6 +43,7 @@ function completeTypedDateInput(raw: string): string {
 }
 
 type SortDirection = "asc" | "desc";
+type MultiFilterKey = "types" | "necessities" | "categories" | "accounts" | "tags" | CustomFieldKey;
 
 interface BulkEditChanges {
   date?: string;
@@ -46,6 +54,7 @@ interface BulkEditChanges {
   category?: string;
   tagMode?: "add" | "remove" | "replace";
   tags?: string[];
+  customValues?: Record<string, string>;
 }
 
 const AUXILIARY_CHART_COLORS = ["#E2A23A", "#8A63D2", "#1F9D8A", "#D76A9B", "#53657D", "#B5793E"];
@@ -63,12 +72,13 @@ export class DashboardView extends ItemView {
   private selectedIds = new Set<string>();
   private deletingIds = new Set<string>();
   private exportIds: string[] = [];
+  private tablePage = 1;
   private preferredScrollAnchor = "";
   private scrollElement: HTMLElement | Window = window;
   private trendCache = new Map<string, number[]>();
   private tableResizeObserver: ResizeObserver | null = null;
-  private openMultiFilter: "types" | "necessities" | "categories" | "accounts" | "tags" | null = null;
-  private readonly multiFilterSearch: Record<"types" | "necessities" | "categories" | "accounts" | "tags", string> = { types: "", necessities: "", categories: "", accounts: "", tags: "" };
+  private openMultiFilter: MultiFilterKey | null = null;
+  private readonly multiFilterSearch: Record<string, string> = { types: "", necessities: "", categories: "", accounts: "", tags: "" };
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: BookkeepingPlugin) {
     super(leaf);
@@ -80,6 +90,7 @@ export class DashboardView extends ItemView {
       : plugin.settings.filterPersistence === "monthly" && plugin.settings.savedMonthlyDashboardFilters[this.month]
         ? cloneDashboardFilters(plugin.settings.savedMonthlyDashboardFilters[this.month] as DashboardFilters)
         : emptyDashboardFilters();
+    this.enableCrossMonthForDateRange();
     this.showAdvancedFilters = plugin.settings.filterPersistence === "current"
       ? plugin.settings.savedDashboardAdvancedFilters
       : plugin.settings.filterPersistence === "monthly"
@@ -104,13 +115,15 @@ export class DashboardView extends ItemView {
     this.scrollElement = Platform.isMobile ? this.resolveMobileScrollElement() : this.contentEl;
     if (this.scrollElement instanceof Window) this.registerDomEvent(window, "scroll", () => this.updateFloatingBackToTop(), { passive: true });
     else this.registerDomEvent(this.scrollElement, "scroll", () => this.updateFloatingBackToTop());
-    this.registerDomEvent(document, "pointerdown", (event) => {
+    this.registerDomEvent(document, "click", (event) => {
       const opened = this.contentEl.querySelector<HTMLDetailsElement>(".bookkeeping-multi-filter[open]");
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (opened && !opened.contains(target)) {
+        const scrollTop = this.getScrollTop();
         opened.removeAttribute("open");
         this.openMultiFilter = null;
+        window.requestAnimationFrame(() => this.setScrollTop(scrollTop));
       }
     }, true);
     await this.render();
@@ -148,9 +161,11 @@ export class DashboardView extends ItemView {
       this.plugin.settings.savedMonthlyDashboardAdvancedFilters[this.month] = this.showAdvancedFilters;
     }
     this.month = month;
+    this.tablePage = 1;
     if (this.plugin.settings.filterPersistence === "monthly") {
       const saved = this.plugin.settings.savedMonthlyDashboardFilters[month];
       this.filters = saved ? cloneDashboardFilters(saved) : emptyDashboardFilters();
+      this.enableCrossMonthForDateRange();
       this.showAdvancedFilters = Boolean(this.plugin.settings.savedMonthlyDashboardAdvancedFilters[month]);
       this.plugin.settings.lastDashboardMonth = month;
       await this.plugin.saveSettingsQuietly();
@@ -201,7 +216,7 @@ export class DashboardView extends ItemView {
     const useAllMonths = this.filters.crossMonth;
     const tableScope = useAllMonths ? all : monthItems;
     const filteredItems = this.applyFilters(tableScope);
-    const chartItems = this.applyFilters(monthItems);
+    const monthChartItems = this.applyFilters(monthItems);
     const tags = this.collectTags(monthItems);
     this.exportIds = filteredItems.map((item) => item.id);
     this.renderHeader(dashboard);
@@ -211,14 +226,21 @@ export class DashboardView extends ItemView {
       return;
     }
     const summary = this.summarizeFiltered(filteredItems);
-    this.renderSummary(dashboard, summary.income, summary.expense, summary.balance, filteredItems.length, this.hasActiveFilters() ? "筛选" : "本月");
-    this.renderDashboardGrid(dashboard, chartItems, all);
+    this.renderSummary(dashboard, summary.income, summary.expense, summary.balance, filteredItems.length, useAllMonths ? "跨月" : this.hasActiveFilters() ? "筛选" : "本月");
+    this.renderDashboardGrid(dashboard, monthChartItems, filteredItems, all);
     this.renderFilters(dashboard, tableScope, tags);
     const visibleItems = this.sortItems(filteredItems);
+    const pageSize = 100;
+    const shouldPaginate = visibleItems.length > pageSize;
+    const pageCount = Math.max(1, Math.ceil(visibleItems.length / pageSize));
+    this.tablePage = Math.min(Math.max(1, this.tablePage), pageCount);
+    const pageStart = (this.tablePage - 1) * pageSize;
+    const tableItems = shouldPaginate ? visibleItems.slice(pageStart, pageStart + pageSize) : visibleItems;
     const visibleIds = new Set(visibleItems.map((item) => item.id));
     this.selectedIds = new Set([...this.selectedIds].filter((id) => visibleIds.has(id)));
     this.renderBatchToolbar(dashboard, visibleItems);
-    this.renderTable(dashboard, visibleItems);
+    this.renderTable(dashboard, tableItems, visibleItems);
+    if (shouldPaginate) this.renderTablePagination(dashboard, this.tablePage, pageCount, visibleItems.length, pageStart + 1, pageStart + tableItems.length);
     this.renderFloatingBackToTop();
     this.restoreScroll(scrollTop, tableScrollLeft, scrollAnchors, preferredSelector, preferredOffset, version);
     if (activeSearch) window.requestAnimationFrame(() => {
@@ -404,13 +426,13 @@ export class DashboardView extends ItemView {
     body.createDiv({ cls: "bookkeeping-card-value", text: value });
   }
 
-  private renderDashboardGrid(content: HTMLElement, monthItems: Transaction[], all: Transaction[]): void {
+  private renderDashboardGrid(content: HTMLElement, monthItems: Transaction[], detailItems: Transaction[], all: Transaction[]): void {
     const grid = content.createDiv({ cls: "bookkeeping-main-grid" });
     for (const chart of this.plugin.settings.chartConfigs.filter((item) => item.visible)) {
       const panel = this.chartPanel(grid, chart);
       if (chart.kind === "trend") this.renderTrend(panel, chart, monthItems, all);
-      else if (chart.kind === "pie") this.renderPie(panel, chart.metric as PieMetric, monthItems, all);
-      else if (chart.kind === "tag") this.renderTagSummary(panel, chart, monthItems);
+      else if (chart.kind === "pie") this.renderPie(panel, chart.metric as PieMetric, detailItems);
+      else if (chart.kind === "tag") this.renderTagSummary(panel, chart, detailItems);
       else if (chart.kind === "calendar") this.renderCalendar(panel, chart.metric as CalendarMetric, monthItems);
       else if (chart.kind === "budget") {
         const summary = this.plugin.store.summarize(monthItems, this.month);
@@ -744,8 +766,8 @@ export class DashboardView extends ItemView {
     legend.createSpan({ text: "收入", cls: "is-positive" });
   }
 
-  private renderPie(parent: HTMLElement, metric: PieMetric, items: Transaction[], all: Transaction[]): void {
-    const entries = this.pieEntries(metric, items, all).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]);
+  private renderPie(parent: HTMLElement, metric: PieMetric, items: Transaction[]): void {
+    const entries = this.pieEntries(metric, items).filter(([, value]) => value > 0).sort((a, b) => b[1] - a[1]);
     const total = entries.reduce((sum, [, value]) => sum + value, 0);
     if (!entries.length || total <= 0) {
       parent.createDiv({ cls: "bookkeeping-empty", text: "没有符合条件的账目" });
@@ -776,10 +798,10 @@ export class DashboardView extends ItemView {
     });
   }
 
-  private pieEntries(metric: PieMetric, items: Transaction[], all: Transaction[]): Array<[string, number]> {
+  private pieEntries(metric: PieMetric, items: Transaction[]): Array<[string, number]> {
     if (metric === "accountBalance") {
       const selected = new Set(this.filters.accounts);
-      return [...this.plugin.store.accountMonthlyBalances(all, this.month).closing]
+      return [...this.plugin.store.accountMonthlyBalances(items, this.month).closing]
         .filter(([account]) => !selected.size || selected.has(account));
     }
     const grouped = new Map<string, number>();
@@ -889,17 +911,33 @@ export class DashboardView extends ItemView {
     const sortText = `${primaryLabel}${this.sortColumn ? `；${secondaryLabel}` : ""}`;
     title.createDiv({ cls: "bookkeeping-table-sort-hint", text: sortText });
     const filters = section.createDiv({ cls: "bookkeeping-filters" });
-    const search = filters.createEl("input", { cls: "bookkeeping-search-input", type: "search", placeholder: "搜索内容、备注或标签", value: this.filters.keyword });
-    search.addEventListener("input", () => {
+    const search = filters.createEl("input", { cls: "bookkeeping-search-input", type: "search", placeholder: "搜索内容、备注、标签或自定义字段", value: this.filters.keyword });
+    let composing = false;
+    const scheduleSearch = (): void => {
       this.filters.keyword = search.value;
+      this.tablePage = 1;
       window.clearTimeout(Number(search.dataset.timer ?? 0));
       search.dataset.timer = String(window.setTimeout(() => { void this.render(); }, 180));
+    };
+    search.addEventListener("compositionstart", () => {
+      composing = true;
+      window.clearTimeout(Number(search.dataset.timer ?? 0));
+    });
+    search.addEventListener("compositionend", () => {
+      composing = false;
+      scheduleSearch();
+    });
+    search.addEventListener("input", (event) => {
+      if (composing || (event instanceof InputEvent && event.isComposing)) return;
+      scheduleSearch();
     });
     const hasFilters = this.hasActiveFilters();
     if (hasFilters) {
       const clear = filters.createEl("button", { cls: "bookkeeping-filter-clear mod-warning", text: "清空筛选", attr: { type: "button" } });
       clear.addEventListener("click", () => {
+        this.preferredScrollAnchor = ".bookkeeping-filter-toggle";
         this.filters = emptyDashboardFilters();
+        this.tablePage = 1;
         void this.render();
       });
     }
@@ -924,9 +962,18 @@ export class DashboardView extends ItemView {
       const tagOptions = this.collectTags(this.applyFilters(monthItems, "tags"));
       this.renderMultiFilter(basicGrid, "types", "类型", typeOptions, this.filters.types, (values) => this.filters.types = values, (value) => this.plugin.settings.typeLabels[value] ?? value);
       this.renderMultiFilter(basicGrid, "necessities", "必要性", necessityOptions, this.filters.necessities, (values) => this.filters.necessities = values, (value) => this.plugin.settings.necessityLabels[value] ?? value);
-      if (this.isTableColumnVisible("category")) this.renderMultiFilter(basicGrid, "categories", "分类", categoryOptions, this.filters.categories, (values) => this.filters.categories = values);
-      if (this.isTableColumnVisible("account")) this.renderMultiFilter(basicGrid, "accounts", "账户", accountOptions, this.filters.accounts, (values) => this.filters.accounts = values);
+      if (this.plugin.settings.enableCategory) this.renderMultiFilter(basicGrid, "categories", "分类", categoryOptions, this.filters.categories, (values) => this.filters.categories = values);
+      if (this.plugin.settings.enableAccount) this.renderMultiFilter(basicGrid, "accounts", "账户", accountOptions, this.filters.accounts, (values) => this.filters.accounts = values);
       this.renderMultiFilter(basicGrid, "tags", "标签", tagOptions.length ? tagOptions : tags, this.selectedFilterTags(), (values) => this.filters.tags = values.join(" "));
+      for (const field of this.plugin.settings.customFields.filter((item) => item.enabled && item.kind === "select")) {
+        const key = customFieldKey(field.id);
+        const values = this.applyFilters(monthItems, key).map((item) => item.customValues[field.id] || customFieldDefaultValue(field)).filter(Boolean);
+        const options = [...new Set([...field.options, ...values])];
+        this.renderMultiFilter(basicGrid, key, field.name, options, this.filters.customFields[field.id] ?? [], (selected) => {
+          if (selected.length) this.filters.customFields[field.id] = selected;
+          else delete this.filters.customFields[field.id];
+        });
+      }
       const crossMonth = basics.createDiv({
         cls: "bookkeeping-cross-month-filter bookkeeping-cross-month-filter-main",
         attr: { role: "checkbox", tabindex: "0", "aria-checked": String(this.filters.crossMonth) }
@@ -936,7 +983,9 @@ export class DashboardView extends ItemView {
       crossMonthCheckbox.tabIndex = -1;
       crossMonth.createSpan({ text: "跨月筛选全部账目" });
       const toggleCrossMonth = (): void => {
+        this.preferredScrollAnchor = ".bookkeeping-cross-month-filter-main";
         this.filters.crossMonth = !this.filters.crossMonth;
+        this.tablePage = 1;
         void this.render();
       };
       crossMonth.addEventListener("click", (event) => {
@@ -967,7 +1016,7 @@ export class DashboardView extends ItemView {
     }
   }
 
-  private renderMultiFilter(parent: HTMLElement, key: "types" | "necessities" | "categories" | "accounts" | "tags", label: string, rawOptions: string[], selected: string[], onChange: (values: string[]) => void, displayOption: (value: string) => string = (value) => value): void {
+  private renderMultiFilter(parent: HTMLElement, key: MultiFilterKey, label: string, rawOptions: string[], selected: string[], onChange: (values: string[]) => void, displayOption: (value: string) => string = (value) => value): void {
     const field = parent.createDiv({ cls: "bookkeeping-filter-field bookkeeping-value-filter-field" });
     field.createSpan({ text: label });
     const details = field.createEl("details", { cls: "bookkeeping-multi-filter" });
@@ -995,7 +1044,7 @@ export class DashboardView extends ItemView {
     const searchWrap = body.createDiv({ cls: "bookkeeping-filter-search-wrap" });
     const searchIcon = searchWrap.createSpan();
     setIcon(searchIcon, "search");
-    const search = searchWrap.createEl("input", { type: "search", value: this.multiFilterSearch[key], attr: { placeholder: "可使用空格分隔多个关键词", "aria-label": `搜索${label}` } });
+    const search = searchWrap.createEl("input", { type: "search", value: this.multiFilterSearch[key] ?? "", attr: { placeholder: "可使用空格分隔多个关键词", "aria-label": `搜索${label}` } });
     const choices = body.createDiv({ cls: "bookkeeping-multi-filter-choices" });
     const options = [...new Set(rawOptions)].sort((a, b) => a.localeCompare(b, "zh-CN-u-co-pinyin", { numeric: true }));
     const draft = new Set(selected.length ? selected.filter((item) => options.includes(item)) : options);
@@ -1049,13 +1098,19 @@ export class DashboardView extends ItemView {
     const actions = body.createDiv({ cls: "bookkeeping-filter-panel-actions" });
     const clear = actions.createEl("button", { text: "清除筛选", cls: "mod-warning", attr: { type: "button" } });
     clear.addEventListener("click", () => {
-      draft.clear();
-      options.forEach((option) => draft.add(option));
-      checkboxes.forEach((checkbox) => checkbox.checked = true);
-      refreshAll();
+      onChange([]);
+      this.tablePage = 1;
+      this.preferredScrollAnchor = ".bookkeeping-advanced-filters";
+      this.openMultiFilter = null;
+      details.open = false;
+      void this.render();
     });
     const cancel = actions.createEl("button", { text: "取消", attr: { type: "button" } });
-    cancel.addEventListener("click", () => { details.open = false; });
+    cancel.addEventListener("click", () => {
+      const scrollTop = this.getScrollTop();
+      details.open = false;
+      window.requestAnimationFrame(() => this.setScrollTop(scrollTop));
+    });
     const confirm = actions.createEl("button", { text: "确认", cls: "mod-cta", attr: { type: "button" } });
     confirm.addEventListener("click", () => {
       if (options.length && !draft.size) {
@@ -1063,6 +1118,8 @@ export class DashboardView extends ItemView {
         return;
       }
       onChange(draft.size === options.length ? [] : [...draft]);
+      this.tablePage = 1;
+      this.preferredScrollAnchor = ".bookkeeping-advanced-filters";
       this.openMultiFilter = null;
       void this.render();
     });
@@ -1092,8 +1149,10 @@ export class DashboardView extends ItemView {
     const clear = wrap.createEl("button", { cls: "clickable-icon bookkeeping-range-clear", attr: { type: "button", "aria-label": `清空${placeholder}`, title: `清空${placeholder}` } });
     setIcon(clear, "delete");
     clear.addEventListener("click", () => {
+      this.preferredScrollAnchor = ".bookkeeping-filter-range-grid";
       if (edge === "min") this.filters.amountMin = "";
       else this.filters.amountMax = "";
+      this.tablePage = 1;
       void this.render();
     });
     input.addEventListener("change", () => {
@@ -1111,6 +1170,8 @@ export class DashboardView extends ItemView {
       }
       if (edge === "min") this.filters.amountMin = next;
       else this.filters.amountMax = next;
+      this.tablePage = 1;
+      this.preferredScrollAnchor = ".bookkeeping-filter-range-grid";
       void this.render();
     });
   }
@@ -1134,8 +1195,10 @@ export class DashboardView extends ItemView {
       input.setSelectionRange(next.length, next.length);
     });
     clear.addEventListener("click", () => {
+      this.preferredScrollAnchor = ".bookkeeping-filter-range-grid";
       if (edge === "from") this.filters.dateFrom = "";
       else this.filters.dateTo = "";
+      this.tablePage = 1;
       void this.render();
     });
     input.addEventListener("change", () => {
@@ -1156,17 +1219,29 @@ export class DashboardView extends ItemView {
       }
       if (edge === "from") this.filters.dateFrom = normalized;
       else this.filters.dateTo = normalized;
+      this.enableCrossMonthForDateRange();
+      this.tablePage = 1;
+      this.preferredScrollAnchor = ".bookkeeping-filter-range-grid";
       void this.render();
     });
   }
 
   private hasActiveFilters(): boolean {
     return this.filters.types.length > 0 || this.filters.necessities.length > 0 || this.filters.categories.length > 0 || this.filters.accounts.length > 0
+      || Object.values(this.filters.customFields).some((values) => values.length > 0)
       || this.filters.crossMonth || Boolean(this.filters.keyword || this.filters.amountMin || this.filters.amountMax || this.filters.dateFrom || this.filters.dateTo || this.filters.tags || this.filters.calendarDate);
   }
 
+  private enableCrossMonthForDateRange(): void {
+    if ([this.filters.dateFrom, this.filters.dateTo].some((date) => date && monthOf(date) !== this.month)) this.filters.crossMonth = true;
+  }
+
   private toggleCalendarDateFilter(date: string): void {
-    this.filters.calendarDate = this.filters.calendarDate === date ? "" : date;
+    const selected = this.filters.dateFrom === date && this.filters.dateTo === date;
+    this.filters.dateFrom = selected ? "" : date;
+    this.filters.dateTo = selected ? "" : date;
+    this.filters.calendarDate = "";
+    this.tablePage = 1;
     void this.render();
   }
 
@@ -1179,6 +1254,7 @@ export class DashboardView extends ItemView {
     if (selected.has(tag)) selected.delete(tag);
     else selected.add(tag);
     this.filters.tags = [...selected].join(" ");
+    this.tablePage = 1;
   }
 
   private toggleAccountFilter(account: string): void {
@@ -1186,9 +1262,10 @@ export class DashboardView extends ItemView {
     if (selected.has(account)) selected.delete(account);
     else selected.add(account);
     this.filters.accounts = [...selected];
+    this.tablePage = 1;
   }
 
-  private applyFilters(items: Transaction[], excluded?: "types" | "necessities" | "categories" | "accounts" | "tags"): Transaction[] {
+  private applyFilters(items: Transaction[], excluded?: MultiFilterKey): Transaction[] {
     const keyword = this.filters.keyword.trim().toLocaleLowerCase("zh-CN");
     const minAmount = this.filters.amountMin === "" ? null : Number(this.filters.amountMin);
     const maxAmount = this.filters.amountMax === "" ? null : Number(this.filters.amountMax);
@@ -1196,8 +1273,13 @@ export class DashboardView extends ItemView {
     return items.filter((item) => {
       if (excluded !== "types" && this.filters.types.length && !this.filters.types.includes(item.type)) return false;
       if (excluded !== "necessities" && this.filters.necessities.length && !this.filters.necessities.includes(item.necessity)) return false;
-      if (excluded !== "categories" && this.isTableColumnVisible("category") && this.filters.categories.length && !this.filters.categories.includes(item.category || "未分类")) return false;
-      if (excluded !== "accounts" && this.isTableColumnVisible("account") && this.filters.accounts.length && !this.filters.accounts.includes(item.account) && !this.filters.accounts.includes(item.targetAccount)) return false;
+      if (excluded !== "categories" && this.plugin.settings.enableCategory && this.filters.categories.length && !this.filters.categories.includes(item.category || "未分类")) return false;
+      if (excluded !== "accounts" && this.plugin.settings.enableAccount && this.filters.accounts.length && !this.filters.accounts.includes(item.account) && !this.filters.accounts.includes(item.targetAccount)) return false;
+      for (const field of this.plugin.settings.customFields.filter((custom) => custom.enabled && custom.kind === "select")) {
+        const key = customFieldKey(field.id);
+        const selected = this.filters.customFields[field.id] ?? [];
+        if (excluded !== key && selected.length && !selected.includes(item.customValues[field.id] || customFieldDefaultValue(field))) return false;
+      }
       if (minAmount !== null && Number.isFinite(minAmount) && item.amount < minAmount) return false;
       if (maxAmount !== null && Number.isFinite(maxAmount) && item.amount > maxAmount) return false;
       if (this.filters.calendarDate && item.date !== this.filters.calendarDate) return false;
@@ -1207,7 +1289,7 @@ export class DashboardView extends ItemView {
         const itemTags = this.customTags(item);
         if (!requiredTags.every((tag) => itemTags.includes(tag))) return false;
       }
-      if (keyword && !`${item.title} ${item.note} ${item.expression} ${item.category} ${item.account} ${item.tags.join(" ")} ${item.attachments.join(" ")}`.toLocaleLowerCase("zh-CN").includes(keyword)) return false;
+      if (keyword && !`${item.title} ${item.note} ${item.expression} ${item.category} ${item.account} ${item.tags.join(" ")} ${item.attachments.join(" ")} ${Object.values(item.customValues).join(" ")}`.toLocaleLowerCase("zh-CN").includes(keyword)) return false;
       return true;
     });
   }
@@ -1229,6 +1311,11 @@ export class DashboardView extends ItemView {
   }
 
   private compareColumn(a: Transaction, b: Transaction, column: TableColumn): number {
+    if (isCustomFieldKey(column)) {
+      const id = customFieldId(column);
+      const config = this.plugin.settings.customFields.find((field) => field.id === id);
+      return (a.customValues[id] || (config ? customFieldDefaultValue(config) : "")).localeCompare(b.customValues[id] || (config ? customFieldDefaultValue(config) : ""), "zh-CN-u-co-pinyin", { numeric: true });
+    }
     if (column === "date") return `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
     if (column === "amount") return this.signedAmount(a) - this.signedAmount(b);
     if (column === "title") return a.title.localeCompare(b.title, "zh-CN-u-co-pinyin", { numeric: true });
@@ -1250,10 +1337,6 @@ export class DashboardView extends ItemView {
     return this.plugin.store.typeEffect(item.type);
   }
 
-  private isTableColumnVisible(column: TableColumn): boolean {
-    return this.plugin.settings.visibleTableColumns.includes(column);
-  }
-
   private canInlineEdit(column: TableColumn): boolean {
     return this.plugin.settings.enableInlineEditing && this.plugin.settings.editableColumns.includes(column);
   }
@@ -1271,7 +1354,11 @@ export class DashboardView extends ItemView {
       else void this.deleteBatch(selected);
     });
     const cancel = toolbar.createEl("button", { text: "取消选择" });
-    cancel.addEventListener("click", () => { this.selectedIds.clear(); void this.render(); });
+    cancel.addEventListener("click", () => {
+      this.preferredScrollAnchor = ".bookkeeping-table-wrapper";
+      this.selectedIds.clear();
+      void this.render();
+    });
   }
 
   private async batchModify(items: Transaction[], changes: BulkEditChanges): Promise<void> {
@@ -1303,6 +1390,9 @@ export class DashboardView extends ItemView {
           draft.tags = draft.tags.filter((tag) => !changes.tags?.includes(tag));
           for (const tag of changes.tags) draft.note = this.replaceNoteTag(draft.note, tag, null);
         }
+      }
+      if (changes.customValues) {
+        for (const [fieldId, value] of Object.entries(changes.customValues)) draft.customValues[fieldId] = value;
       }
       await this.plugin.store.update(item, draft);
     }
@@ -1365,7 +1455,33 @@ export class DashboardView extends ItemView {
     })(); });
   }
 
-  private renderTable(content: HTMLElement, items: Transaction[]): void {
+  private renderTablePagination(content: HTMLElement, page: number, pageCount: number, total: number, from: number, to: number): void {
+    const pagination = content.createDiv({ cls: "bookkeeping-table-pagination", attr: { "aria-label": "账目分页" } });
+    pagination.createSpan({ cls: "bookkeeping-table-page-summary", text: `共${total}笔，当前${from}–${to}笔` });
+    const controls = pagination.createDiv({ cls: "bookkeeping-table-page-controls" });
+    const changePage = (next: number): void => {
+      if (next === page || next < 1 || next > pageCount) return;
+      this.tablePage = next;
+      this.preferredScrollAnchor = ".bookkeeping-table-wrapper";
+      void this.render();
+    };
+    const button = (label: string, target: number, disabled: boolean, current = false): void => {
+      const control = controls.createEl("button", { text: label, attr: { type: "button", "aria-label": current ? `第${target}页，当前页` : label } });
+      control.disabled = disabled;
+      control.toggleClass("is-current", current);
+      control.addEventListener("click", () => changePage(target));
+    };
+    button("首页", 1, page === 1);
+    button("上一页", page - 1, page === 1);
+    const start = Math.max(1, Math.min(page - 2, pageCount - 4));
+    const end = Math.min(pageCount, start + 4);
+    for (let current = start; current <= end; current++) button(String(current), current, current === page, current === page);
+    button("下一页", page + 1, page === pageCount);
+    button("末页", pageCount, page === pageCount);
+    pagination.createSpan({ cls: "bookkeeping-table-page-count", text: `第${page}/${pageCount}页` });
+  }
+
+  private renderTable(content: HTMLElement, items: Transaction[], selectionScope: Transaction[] = items): void {
     const columns = this.plugin.settings.tableColumnOrder.filter((column) => this.plugin.settings.visibleTableColumns.includes(column));
     const createScrollbar = (position: "top" | "bottom"): { track: HTMLDivElement; thumb: HTMLDivElement } => {
       const track = content.createDiv({
@@ -1406,18 +1522,15 @@ export class DashboardView extends ItemView {
     table.setCssStyles({ width: `max(100%, ${fixedWidth}px)`, minWidth: `${fixedWidth}px`, maxWidth: "none", tableLayout: "fixed" });
     const head = table.createEl("thead").createEl("tr");
     const selectAllCell = head.createEl("th", { cls: "bookkeeping-select-column" });
-    const selectAll = selectAllCell.createEl("input", { type: "checkbox", attr: { "aria-label": "选择全部可见账目" } });
-    selectAll.checked = items.length > 0 && items.every((item) => this.selectedIds.has(item.id));
-    selectAll.disabled = items.length === 0;
+    const selectAll = selectAllCell.createEl("input", { type: "checkbox", attr: { "aria-label": "选择全部筛选结果" } });
+    selectAll.checked = selectionScope.length > 0 && selectionScope.every((item) => this.selectedIds.has(item.id));
+    selectAll.indeterminate = !selectAll.checked && selectionScope.some((item) => this.selectedIds.has(item.id));
+    selectAll.disabled = selectionScope.length === 0;
     selectAll.addEventListener("change", () => {
-      if (selectAll.checked) items.forEach((item) => this.selectedIds.add(item.id));
-      else items.forEach((item) => this.selectedIds.delete(item.id));
-      body.querySelectorAll<HTMLTableRowElement>("tr[data-transaction-id]").forEach((row) => {
-        const id = row.dataset.transactionId ?? "";
-        row.toggleClass("is-selected", this.selectedIds.has(id));
-        const rowCheckbox = row.querySelector<HTMLInputElement>(".bookkeeping-select-column input[type='checkbox']");
-        if (rowCheckbox) rowCheckbox.checked = this.selectedIds.has(id);
-      });
+      if (selectAll.checked) selectionScope.forEach((item) => this.selectedIds.add(item.id));
+      else selectionScope.forEach((item) => this.selectedIds.delete(item.id));
+      this.preferredScrollAnchor = ".bookkeeping-table-wrapper";
+      void this.render();
     });
     for (const column of columns) this.renderTableHeader(head, column);
     head.createEl("th", { cls: "bookkeeping-table-fill-cell", attr: { "aria-hidden": "true" } });
@@ -1438,7 +1551,10 @@ export class DashboardView extends ItemView {
         if (checkbox.checked) this.selectedIds.add(item.id);
         else this.selectedIds.delete(item.id);
         row.toggleClass("is-selected", checkbox.checked);
-        selectAll.checked = items.length > 0 && items.every((visibleItem) => this.selectedIds.has(visibleItem.id));
+        selectAll.checked = selectionScope.length > 0 && selectionScope.every((visibleItem) => this.selectedIds.has(visibleItem.id));
+        selectAll.indeterminate = !selectAll.checked && selectionScope.some((visibleItem) => this.selectedIds.has(visibleItem.id));
+        this.preferredScrollAnchor = `[data-transaction-id="${CSS.escape(item.id)}"]`;
+        void this.render();
       });
       for (const column of columns) this.renderTableCell(row, column, item);
       row.createEl("td", { cls: "bookkeeping-table-fill-cell", attr: { "aria-hidden": "true" } });
@@ -1530,7 +1646,7 @@ export class DashboardView extends ItemView {
     const cell = row.createEl("th");
     cell.dataset.column = column;
     this.applyStoredColumnWidth(cell, column);
-    const label = this.plugin.settings.tableColumnLabels[column];
+    const label = this.plugin.settings.tableColumnLabels[column] ?? "表头";
     if (column === "actions") {
       cell.setText(label);
       this.renderColumnResizer(cell, column);
@@ -1571,7 +1687,9 @@ export class DashboardView extends ItemView {
     const cell = row.createEl("td");
     cell.dataset.column = column;
     this.applyStoredColumnWidth(cell, column);
-    if (column === "date") {
+    if (isCustomFieldKey(column)) {
+      this.renderCustomCell(cell, item, column);
+    } else if (column === "date") {
       if (this.canInlineEdit("date")) this.renderInlineDate(cell, item);
       else {
         const value = cell.createDiv({ cls: "bookkeeping-date-cell", attr: { title: this.displayDate(item.date) } });
@@ -1672,7 +1790,8 @@ export class DashboardView extends ItemView {
   private effectiveColumnWidth(column: TableColumn): number {
     const stored = this.plugin.settings.tableColumnWidths[column];
     if (typeof stored === "number" && Number.isFinite(stored)) return this.normalizeColumnWidth(column, stored);
-    const defaults: Record<TableColumn, number> = {
+    if (isCustomFieldKey(column)) return 96;
+    const defaults = {
       date: 58,
       title: 128,
       type: 58,
@@ -1695,7 +1814,8 @@ export class DashboardView extends ItemView {
   }
 
   private columnMinimumWidth(column: TableColumn): number {
-    const widths: Record<TableColumn, number> = {
+    if (isCustomFieldKey(column)) return 48;
+    const widths = {
       date: 58,
       title: 48,
       type: 54,
@@ -1876,6 +1996,61 @@ export class DashboardView extends ItemView {
     });
   }
 
+  private renderCustomCell(cell: HTMLTableCellElement, item: Transaction, column: TableColumn): void {
+    if (!isCustomFieldKey(column)) return;
+    const id = customFieldId(column);
+    const config = this.plugin.settings.customFields.find((field) => field.id === id);
+    const value = item.customValues[id] || (config ? customFieldDefaultValue(config) : "");
+    if (!config) {
+      cell.createSpan({ text: value || "无", cls: value ? "bookkeeping-user-text" : "is-empty" });
+      return;
+    }
+    if (!this.canInlineEdit(column) || !config.enabled) {
+      cell.createSpan({ text: value || "无", attr: { title: value || "无" }, cls: `bookkeeping-cell-ellipsis${value ? " bookkeeping-user-text" : " is-empty"}` });
+      return;
+    }
+    if (config.kind === "select") {
+      const button = cell.createEl("button", { cls: `bookkeeping-inline-choice${value ? "" : " is-empty"}`, text: value || "无", attr: { title: `修改${config.name}` } });
+      button.addEventListener("click", (event) => {
+        const menu = new Menu();
+        [...new Set([value, ...config.options].filter(Boolean))].forEach((option) => {
+          menu.addItem((menuItem) => menuItem
+            .setTitle(option)
+            .setChecked(option === value)
+            .onClick(() => { void (async () => {
+              const draft = this.toDraft(item);
+              draft.customValues[id] = option;
+              await this.plugin.store.update(item, draft);
+              await this.render();
+            })(); }));
+        });
+        menu.showAtMouseEvent(event);
+      });
+      return;
+    }
+    const button = cell.createEl("button", { cls: `bookkeeping-inline-value bookkeeping-cell-ellipsis${value ? "" : " is-empty"}`, text: value || "无", attr: { title: `修改${config.name}` } });
+    button.addEventListener("click", () => {
+      cell.empty();
+      const input = cell.createEl("input", { type: "text", cls: "bookkeeping-inline-input", value, attr: { placeholder: "可以留空" } });
+      let finished = false;
+      const commit = async (): Promise<void> => {
+        if (finished) return;
+        finished = true;
+        const draft = this.toDraft(item);
+        draft.customValues[id] = input.value.trim();
+        await this.plugin.store.update(item, draft);
+        await this.render();
+      };
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") { event.preventDefault(); void commit(); }
+        else if (event.key === "Escape") { finished = true; void this.render(); }
+      });
+      input.addEventListener("blur", () => void commit());
+      input.focus();
+      input.select();
+    });
+  }
+
   private renderInlineChoice(
     cell: HTMLTableCellElement,
     item: Transaction,
@@ -2012,7 +2187,8 @@ export class DashboardView extends ItemView {
       expression: item.expression,
       note: item.note === "无" ? "" : item.note,
       tags: [...item.tags],
-      attachments: [...item.attachments]
+      attachments: [...item.attachments],
+      customValues: { ...item.customValues }
     };
   }
 
@@ -2500,10 +2676,13 @@ class OpeningBalanceModal extends Modal {
         if (moved) this.accounts.splice(index + 1, 0, moved);
         this.renderContent();
       }));
-      row.addExtraButton((button) => button.setIcon("trash-2").setTooltip("删除账户配置").setDisabled(this.accounts.length <= 1).onClick(() => {
-        this.accounts.splice(index, 1);
-        this.renderContent();
-      }));
+      row.addExtraButton((button) => {
+        button.extraSettingsEl.addClass("bookkeeping-danger-button");
+        button.setIcon("trash-2").setTooltip("删除账户配置").setDisabled(this.accounts.length <= 1).onClick(() => {
+          this.accounts.splice(index, 1);
+          this.renderContent();
+        });
+      });
     });
     let newName = "";
     let newCode = "";
@@ -2604,6 +2783,18 @@ class BulkEditModal extends Modal {
         .addOptions(categoryOptions)
         .onChange((value) => this.changes.category = value || undefined));
     }
+    const customValues: Record<string, string> = {};
+    for (const field of this.settings.customFields.filter((item) => item.enabled && item.kind === "select")) {
+      const options: Record<string, string> = { "": "不修改" };
+      for (const option of field.options) options[option] = option;
+      new Setting(this.contentEl).setName(field.name).addDropdown((dropdown) => dropdown
+        .addOptions(options)
+        .onChange((value) => {
+          if (value) customValues[field.id] = value;
+          else delete customValues[field.id];
+          this.changes.customValues = Object.keys(customValues).length ? { ...customValues } : undefined;
+        }));
+    }
     new Setting(this.contentEl).setName("标签操作").addDropdown((dropdown) => dropdown
       .addOptions({ "": "不修改", add: "增加标签", remove: "删除标签", replace: "替换全部标签" })
       .onChange((value) => this.changes.tagMode = value === "add" || value === "remove" || value === "replace" ? value : undefined));
@@ -2644,7 +2835,9 @@ class ConfirmBatchDeleteModal extends Modal {
     this.contentEl.createEl("p", { text: `确定删除选中的${this.count}笔账目吗？` });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("批量删除").setDestructive().onClick(() => {
+    const remove = new ButtonComponent(actions).setButtonText("批量删除").setDestructive();
+    remove.buttonEl.addClass("bookkeeping-danger-button");
+    remove.onClick(() => {
       this.close();
       this.onConfirm();
     });
@@ -2662,7 +2855,9 @@ class ConfirmDeleteModal extends Modal {
     this.contentEl.createEl("p", { text: `确定删除“${this.transaction.title}”吗？文件将移至系统回收站。` });
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("删除").setDestructive().onClick(() => {
+    const remove = new ButtonComponent(actions).setButtonText("删除").setDestructive();
+    remove.buttonEl.addClass("bookkeeping-danger-button");
+    remove.onClick(() => {
       this.close();
       this.confirm();
     });

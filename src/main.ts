@@ -1,13 +1,14 @@
-import { App, ButtonComponent, Modal, Notice, Platform, Plugin, Setting, TFile, TFolder, normalizePath, setIcon } from "obsidian";
+import { App, ButtonComponent, Modal, Notice, Platform, Plugin, Setting, TFile, setIcon } from "obsidian";
 import { DashboardView, DASHBOARD_VIEW_TYPE } from "./dashboard-view";
 import { KeyboardEntryModal } from "./keyboard-entry-modal";
 import { BookkeepingSettingTab } from "./settings-tab";
 import { TransactionModal } from "./transaction-modal";
-import { TransactionStore } from "./transaction-store";
-import { DEFAULT_SETTINGS, type AnnualChartConfig, type AnnualChartMetric, type BookkeepingSettings, type CalendarWeekStart, type ChartKind, type ChartMetric, type DashboardChartConfig, type EntryField, type HeaderAction, type TableColumn, type Transaction, type TransactionType } from "./types";
+import { TransactionStore, type CsvCustomFieldConfiguration } from "./transaction-store";
+import { DEFAULT_SETTINGS, customFieldKey, isCustomFieldKey, type AnnualChartConfig, type AnnualChartMetric, type BookkeepingSettings, type CalendarWeekStart, type ChartKind, type ChartMetric, type CustomFieldConfig, type DashboardChartConfig, type TableColumn, type Transaction, type TransactionType } from "./types";
 import { currentMonth, errorMessageZh, formatMoney } from "./utils";
 import logoUrl from "./assets/branding/logo.png";
 import { I18nController, translate } from "./locales";
+import { VaultFolderSuggest } from "./vault-folder-suggest";
 
 
 
@@ -27,25 +28,6 @@ function isMonthString(value: unknown): value is string {
 type StoredBookkeepingSettings = Partial<BookkeepingSettings> & {
   continuousEntry?: unknown;
 };
-
-function attachVaultFolderSuggestions(app: App, input: HTMLInputElement): void {
-  const folders = app.vault.getAllLoadedFiles().filter((file): file is TFolder => file instanceof TFolder && Boolean(file.path)).map((folder) => folder.path).sort();
-  const id = `bookkeeping-vault-folders-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const datalist = document.body.createEl("datalist", { attr: { id } });
-  folders.forEach((path) => datalist.createEl("option", { value: path }));
-  input.setAttribute("list", id);
-  input.addEventListener("change", () => {
-    const raw = normalizePath(input.value.trim());
-    if (!raw) return;
-    const exact = folders.find((path) => path.toLocaleLowerCase() === raw.toLocaleLowerCase());
-    const byName = folders.filter((path) => path.split("/").pop()?.toLocaleLowerCase() === raw.toLocaleLowerCase());
-    const matchedFolder = byName.length === 1 ? byName[0] : undefined;
-    input.value = exact ?? matchedFolder ?? raw;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  const observer = new MutationObserver(() => { if (!input.isConnected) { datalist.remove(); observer.disconnect(); } });
-  observer.observe(document.body, { childList: true, subtree: true });
-}
 
 export default class BookkeepingPlugin extends Plugin {
   settings!: BookkeepingSettings;
@@ -291,6 +273,40 @@ export default class BookkeepingPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  async applyCsvCustomFieldConfiguration(configuration: CsvCustomFieldConfiguration): Promise<void> {
+    const oldKeys = this.settings.customFields.map((field) => customFieldKey(field.id));
+    const newFields = configuration.fields.map((field) => ({
+      ...field,
+      options: [...field.options],
+      optionCodes: { ...field.optionCodes },
+      initialOptions: [...field.initialOptions],
+      initialOptionCodes: { ...field.initialOptionCodes }
+    }));
+    const newKeys = newFields.map((field) => customFieldKey(field.id));
+    this.settings.enableAccount = configuration.builtInEnabled.account;
+    this.settings.enableType = configuration.builtInEnabled.type;
+    this.settings.enableNecessity = configuration.builtInEnabled.necessity;
+    this.settings.enableCategory = configuration.builtInEnabled.category;
+    this.settings.enableNote = configuration.builtInEnabled.note;
+    this.settings.enableEntryAttachments = configuration.builtInEnabled.attachments;
+    this.settings.customFields = newFields;
+    this.settings.optionFieldOrder = [...configuration.optionFieldOrder];
+    const nextColumns: TableColumn[] = this.settings.tableColumnOrder.filter((column) => !isCustomFieldKey(column));
+    const actionIndex = nextColumns.indexOf("actions");
+    nextColumns.splice(actionIndex >= 0 ? actionIndex : nextColumns.length, 0, ...newKeys);
+    this.settings.tableColumnOrder = nextColumns;
+    this.settings.visibleTableColumns = [...new Set([...this.settings.visibleTableColumns.filter((column) => !isCustomFieldKey(column)), ...newKeys])];
+    this.settings.editableColumns = [...new Set([...this.settings.editableColumns.filter((column) => !isCustomFieldKey(column)), ...newKeys])];
+    for (const key of oldKeys) {
+      delete this.settings.tableColumnLabels[key];
+      delete this.settings.tableColumnWidths[key];
+    }
+    for (const field of newFields) this.settings.tableColumnLabels[customFieldKey(field.id)] = field.name;
+    this.settings.savedDashboardFilters.customFields = {};
+    for (const filters of Object.values(this.settings.savedMonthlyDashboardFilters)) filters.customFields = {};
+    await this.saveSettingsQuietly();
+  }
+
 
 
   pluginLogoUrl(): string {
@@ -308,6 +324,14 @@ export default class BookkeepingPlugin extends Plugin {
 
   private async loadSettings(): Promise<void> {
     const loaded = await this.loadData() as StoredBookkeepingSettings | null;
+    const customFields = this.normalizeCustomFields(loaded?.customFields);
+    const customKeys = customFields.map((field) => customFieldKey(field.id));
+    const tableColumnOrder = this.completeOrder(loaded?.tableColumnOrder, DEFAULT_SETTINGS.tableColumnOrder, customKeys);
+    const validTableColumns = new Set<TableColumn>(tableColumnOrder);
+    const visibleTableColumns = (loaded?.visibleTableColumns ?? DEFAULT_SETTINGS.visibleTableColumns)
+      .filter((column): column is TableColumn => validTableColumns.has(column as TableColumn));
+    const editableColumns = (loaded?.editableColumns ?? DEFAULT_SETTINGS.editableColumns)
+      .filter((column): column is TableColumn => validTableColumns.has(column as TableColumn));
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...(loaded ?? {}),
@@ -321,13 +345,19 @@ export default class BookkeepingPlugin extends Plugin {
       monthlyOpeningBalances: loaded?.monthlyOpeningBalances ?? {},
       desktopContinuousEntry: loaded?.desktopContinuousEntry ?? true,
       mobileContinuousEntry: loaded?.mobileContinuousEntry ?? Boolean(loaded?.continuousEntry),
-      optionFieldOrder: this.completeOrder(loaded?.optionFieldOrder, DEFAULT_SETTINGS.optionFieldOrder),
-      tableColumnOrder: this.completeOrder(loaded?.tableColumnOrder, DEFAULT_SETTINGS.tableColumnOrder),
+      customFields,
+      optionFieldOrder: this.completeOrder(loaded?.optionFieldOrder, DEFAULT_SETTINGS.optionFieldOrder, customKeys),
+      tableColumnOrder,
       tableColumnWidths: { ...(loaded?.tableColumnWidths ?? {}) },
-      visibleTableColumns: loaded?.visibleTableColumns ?? [...DEFAULT_SETTINGS.visibleTableColumns],
-      editableColumns: loaded?.editableColumns ?? [...DEFAULT_SETTINGS.editableColumns],
+      visibleTableColumns,
+      editableColumns,
       attachmentFolder: loaded?.attachmentFolder || DEFAULT_SETTINGS.attachmentFolder,
-      tableColumnLabels: { ...DEFAULT_SETTINGS.tableColumnLabels, ...(loaded?.tableColumnLabels ?? {}), tags: loaded?.tableColumnLabels?.tags === "Tag" ? "标签" : (loaded?.tableColumnLabels?.tags ?? DEFAULT_SETTINGS.tableColumnLabels.tags) },
+      tableColumnLabels: {
+        ...DEFAULT_SETTINGS.tableColumnLabels,
+        ...Object.fromEntries(customFields.map((field) => [customFieldKey(field.id), field.name])),
+        ...(loaded?.tableColumnLabels ?? {}),
+        tags: loaded?.tableColumnLabels?.tags === "Tag" ? "标签" : (loaded?.tableColumnLabels?.tags ?? DEFAULT_SETTINGS.tableColumnLabels.tags ?? "标签")
+      },
       chartConfigs: this.migrateChartConfigs(loaded?.chartConfigs, loaded?.showBudgetPanel, loaded?.showAccountPanel),
       annualChartConfigs: loaded?.annualChartConfigs?.length
         ? loaded.annualChartConfigs.map((chart) => ({ ...chart }))
@@ -366,7 +396,8 @@ export default class BookkeepingPlugin extends Plugin {
         types: [...(loaded?.savedDashboardFilters?.types ?? [])],
         necessities: [...(loaded?.savedDashboardFilters?.necessities ?? [])],
         categories: [...(loaded?.savedDashboardFilters?.categories ?? [])],
-        accounts: [...(loaded?.savedDashboardFilters?.accounts ?? [])]
+        accounts: [...(loaded?.savedDashboardFilters?.accounts ?? [])],
+        customFields: Object.fromEntries(Object.entries(loaded?.savedDashboardFilters?.customFields ?? {}).map(([id, values]) => [id, Array.isArray(values) ? values.map(String) : []]))
       },
       savedMonthlyDashboardFilters: Object.fromEntries(Object.entries(loaded?.savedMonthlyDashboardFilters ?? {}).map(([month, filters]) => [month, {
         ...DEFAULT_SETTINGS.savedDashboardFilters,
@@ -374,7 +405,8 @@ export default class BookkeepingPlugin extends Plugin {
         types: [...(filters.types ?? [])],
         necessities: [...(filters.necessities ?? [])],
         categories: [...(filters.categories ?? [])],
-        accounts: [...(filters.accounts ?? [])]
+        accounts: [...(filters.accounts ?? [])],
+        customFields: Object.fromEntries(Object.entries(filters.customFields ?? {}).map(([id, values]) => [id, Array.isArray(values) ? values.map(String) : []]))
       }]))
     };
     this.settings.typeCodes = this.completeCodes(this.settings.typeOrder, loaded?.typeCodes, DEFAULT_SETTINGS.typeCodes);
@@ -447,11 +479,64 @@ export default class BookkeepingPlugin extends Plugin {
     return migrated.length ? migrated : DEFAULT_SETTINGS.chartConfigs.map((chart) => ({ ...chart }));
   }
 
-  private completeOrder<T extends EntryField | TableColumn | HeaderAction>(loaded: unknown, defaults: T[]): T[] {
+  private normalizeCustomFields(value: unknown): CustomFieldConfig[] {
+    if (!Array.isArray(value)) return [];
+    const fields: CustomFieldConfig[] = [];
+    const ids = new Set<string>();
+    const properties = new Set<string>();
+    for (const item of value) {
+      if (!item || typeof item !== "object") continue;
+      const raw = item as Record<string, unknown>;
+      const id = String(raw["id"] ?? "").trim();
+      const name = String(raw["name"] ?? "").trim();
+      const property = String(raw["property"] ?? name).trim();
+      if (!id || !name || !property || ids.has(id) || properties.has(property.toLocaleLowerCase())) continue;
+      ids.add(id);
+      properties.add(property.toLocaleLowerCase());
+      const kind = raw["kind"] === "select" ? "select" : "text";
+      const options = kind === "select"
+        ? [...new Set((Array.isArray(raw["options"]) ? raw["options"] : []).map(String).map((option) => option.trim()).filter(Boolean))]
+        : [];
+      const rawCodes = raw["optionCodes"] && typeof raw["optionCodes"] === "object" ? raw["optionCodes"] as Record<string, unknown> : {};
+      const optionCodes: Record<string, string> = {};
+      const usedCodes = new Set<string>();
+      options.forEach((option, index) => {
+        let code = String(rawCodes[option] ?? "").trim() || String(index + 1);
+        while (usedCodes.has(code.toLocaleLowerCase())) code = String(Number.isFinite(Number(code)) ? Number(code) + 1 : index + 1);
+        usedCodes.add(code.toLocaleLowerCase());
+        optionCodes[option] = code;
+      });
+      const defaultValue = options.includes(String(raw["defaultValue"] ?? "")) ? String(raw["defaultValue"]) : (options[0] ?? "");
+      const loadedInitialOptions = Array.isArray(raw["initialOptions"])
+        ? [...new Set(raw["initialOptions"].map(String).map((option) => option.trim()).filter(Boolean))]
+        : [];
+      const initialOptions = kind === "select" && loadedInitialOptions.length ? loadedInitialOptions : [...options];
+      const rawInitialCodes = raw["initialOptionCodes"] && typeof raw["initialOptionCodes"] === "object" ? raw["initialOptionCodes"] as Record<string, unknown> : {};
+      const initialOptionCodes = Object.fromEntries(initialOptions.map((option, index) => [option, String(rawInitialCodes[option] ?? optionCodes[option] ?? index + 1).trim() || String(index + 1)]));
+      const initialDefaultValue = initialOptions.includes(String(raw["initialDefaultValue"] ?? "")) ? String(raw["initialDefaultValue"]) : (initialOptions[0] ?? "");
+      fields.push({
+        id,
+        name,
+        property,
+        kind,
+        options,
+        optionCodes,
+        defaultValue,
+        initialOptions,
+        initialOptionCodes,
+        initialDefaultValue,
+        enabled: raw["enabled"] !== false
+      });
+    }
+    return fields;
+  }
+
+  private completeOrder<T extends string>(loaded: unknown, defaults: T[], extras: T[] = []): T[] {
+    const allowed = new Set<T>([...defaults, ...extras]);
     const valid = Array.isArray(loaded)
-      ? loaded.filter((item): item is T => defaults.includes(item as T))
+      ? loaded.filter((item): item is T => allowed.has(item as T))
       : [];
-    return [...new Set([...valid, ...defaults])];
+    return [...new Set([...valid, ...defaults, ...extras])];
   }
 
   private scheduleRefresh(): void {
@@ -475,7 +560,7 @@ class LegacyConverterModal extends Modal {
       .onChange((value) => { this.source = value === "external" ? "external" : "vault"; refresh(); }));
     const vaultSetting = new Setting(this.contentEl).setName("旧版账目位置").addText((text) => {
       text.setValue(this.vaultFolder).onChange((value) => this.vaultFolder = value.trim());
-      attachVaultFolderSuggestions(this.app, text.inputEl);
+      new VaultFolderSuggest(this.app, text.inputEl);
     });
     const externalSetting = new Setting(this.contentEl).setName("旧版账目位置").addButton((button) => button.setButtonText("选择文件夹").setIcon("folder-open").onClick(() => { void (async () => {
       const path = await this.chooseExternalFolder();
@@ -512,13 +597,13 @@ class LegacyConverterModal extends Modal {
       try {
       let message = "";
       if (this.source === "vault") {
-        const count = await this.plugin.store.legacyFileCount(this.vaultFolder);
-        if (!count) throw new Error("所选目录没有检测到旧版账目");
-        const converted = await this.plugin.store.convertLegacyFiles((done, total) => {
+        const result = await this.plugin.store.convertLegacyFiles((done, total) => {
         status.setText(`${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
         fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
         }, this.vaultFolder);
-        message = `已转换${converted}个仓库内旧版账目`;
+        if (!result.total) throw new Error("所选目录没有检测到旧版账目");
+        message = `已转换${result.converted}个仓库内旧版账目，跳过${result.skipped}个，失败${result.failed}个`;
+        if (result.failureFolder) message += `；失败文件已复制到${result.failureFolder}`;
       } else {
         const files = await this.readExternalMarkdown(this.externalFolder);
         if (!files.length) throw new Error("所选外部文件夹中没有Markdown文件");
@@ -526,7 +611,8 @@ class LegacyConverterModal extends Modal {
           status.setText(`${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
           fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
         });
-        message = `已从外部导入${result.imported}笔，跳过或失败${result.failed}个文件`;
+        message = `已从外部导入${result.imported}笔，跳过${result.skipped}个，失败${result.failed}个文件`;
+        if (result.failureFolder) message += `；失败文件已复制到${result.failureFolder}`;
       }
       await this.plugin.refreshDashboards();
       status.setText(message);
@@ -551,17 +637,21 @@ class LegacyConverterModal extends Modal {
     return result.canceled ? "" : (result.filePaths[0] ?? "");
   }
 
-  private async readExternalMarkdown(root: string): Promise<Array<{ name: string; content: string }>> {
+  private async readExternalMarkdown(root: string): Promise<Array<{ name: string; path: string; content: string }>> {
     const requireFn = (typeof require === "function" ? require : (window as unknown as { require?: (id: string) => unknown }).require) as ((id: string) => unknown) | undefined;
     if (!requireFn) throw new Error("当前环境无法读取外部文件夹");
     const fs = requireFn("fs") as { promises: { readdir(path: string, options: { withFileTypes: true }): Promise<Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>>; readFile(path: string, encoding: string): Promise<string> } };
-    const pathApi = requireFn("path") as { join(...parts: string[]): string };
-    const output: Array<{ name: string; content: string }> = [];
+    const pathApi = requireFn("path") as { join(...parts: string[]): string; relative(from: string, to: string): string };
+    const output: Array<{ name: string; path: string; content: string }> = [];
     const walk = async (folder: string): Promise<void> => {
       for (const entry of await fs.promises.readdir(folder, { withFileTypes: true })) {
         const path = pathApi.join(folder, entry.name);
         if (entry.isDirectory()) await walk(path);
-        else if (entry.isFile() && /\.md$/i.test(entry.name)) output.push({ name: entry.name, content: await fs.promises.readFile(path, "utf8") });
+        else if (entry.isFile() && /\.md$/i.test(entry.name)) output.push({
+          name: entry.name,
+          path: pathApi.relative(root, path).replace(/\\/g, "/"),
+          content: await fs.promises.readFile(path, "utf8")
+        });
       }
     };
     await walk(root);
@@ -603,17 +693,26 @@ class ExpressionStorageMigrationModal extends Modal {
 
 class CsvImportModal extends Modal {
   private normalizeMetadata = false;
+  private useAttachedFieldConfig = false;
+  private readonly attachedFieldConfig: CsvCustomFieldConfiguration | null;
   constructor(app: App, private readonly plugin: BookkeepingPlugin, private readonly fileName: string, private readonly text: string) {
     super(app);
+    this.attachedFieldConfig = plugin.store.inspectCsvCustomFieldConfiguration(text);
   }
 
   onOpen(): void {
     this.modalEl.addClass("bookkeeping-modal");
     this.setTitle("导入CSV账目");
-    const estimatedRows = Math.max(this.text.split(/\r?\n/).filter((line) => line.trim()).length - 1, 0);
+    const estimatedRows = Math.max(this.text.split(/\r?\n/).filter((line) => line.trim()).length - (this.attachedFieldConfig ? 2 : 1), 0);
     this.contentEl.createEl("p", { text: `文件：${this.fileName}` });
     this.contentEl.createEl("p", { text: `检测到约${estimatedRows}行数据。会自动识别常见中英文列名，并跳过疑似重复账目。` });
     this.contentEl.createEl("p", { text: "必须包含日期和金额。无法导入的行会生成带原因的失败报告。", cls: "setting-item-description" });
+    if (this.attachedFieldConfig) {
+      new Setting(this.contentEl)
+        .setName("启用CSV附带的录入字段配置")
+        .setDesc(`检测到完整录入字段配置及${this.attachedFieldConfig.fields.length}个自定义字段。关闭时只匹配当前配置，多余CSV字段不会写入；启用时会替换字段开关、顺序和自定义字段，并清除所有原有账目中的旧自定义属性。`)
+        .addToggle((toggle) => toggle.setValue(this.useAttachedFieldConfig).onChange((value) => this.useAttachedFieldConfig = value));
+    }
     const analysis = this.plugin.store.inspectCsvMetadata(this.text);
     if (analysis.hasDifferences) {
       this.normalizeMetadata = true;
@@ -624,7 +723,11 @@ class CsvImportModal extends Modal {
     }
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText(analysis.hasDifferences ? "转换并继续导入" : "开始导入").setCta().onClick(() => void this.run());
+    new ButtonComponent(actions).setButtonText(analysis.hasDifferences ? "转换并继续导入" : "开始导入").setCta().onClick(() => {
+      if (this.useAttachedFieldConfig && this.attachedFieldConfig) {
+        new ConfirmCsvFieldConfigurationModal(this.app, this.attachedFieldConfig.fields.length, () => void this.run()).open();
+      } else void this.run();
+    });
   }
 
   private async run(): Promise<void> {
@@ -633,6 +736,21 @@ class CsvImportModal extends Modal {
     const progress = this.contentEl.createDiv({ cls: "bookkeeping-operation-progress" });
     const fill = progress.createDiv({ cls: "bookkeeping-operation-progress-fill" });
     try {
+      this.plugin.store.validateCsvImportStructure(this.text);
+      if (this.useAttachedFieldConfig && this.attachedFieldConfig) {
+        const properties = [...new Set([
+          ...this.plugin.settings.customFields.map((field) => field.property),
+          ...this.attachedFieldConfig.fields.map((field) => field.property)
+        ])];
+        status.setText("正在清除原有账目的自定义录入字段…");
+        const cleared = await this.plugin.store.clearCustomFieldProperties(properties, (done, total) => {
+          status.setText(`正在清理原有账目 ${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
+          fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
+        });
+        await this.plugin.applyCsvCustomFieldConfiguration(this.attachedFieldConfig);
+        status.setText(`已清理${cleared}笔原有账目，正在导入CSV…（0%）`);
+        fill.setCssStyles({ width: "0%" });
+      }
       const result = await this.plugin.store.importCsv(this.text, (done, total) => {
         status.setText(`正在导入 ${done}/${total}（${total ? Math.round(done / total * 100) : 100}%）`);
         fill.setCssStyles({ width: `${total ? done / total * 100 : 100}%` });
@@ -648,6 +766,25 @@ class CsvImportModal extends Modal {
   }
 }
 
+class ConfirmCsvFieldConfigurationModal extends Modal {
+  constructor(app: App, private readonly fieldCount: number, private readonly onConfirm: () => void) { super(app); }
+
+  onOpen(): void {
+    this.modalEl.addClass("bookkeeping-modal");
+    this.setTitle("启用CSV录入字段配置");
+    this.contentEl.createEl("p", { text: `CSV附带完整录入字段配置及${this.fieldCount}个自定义字段。启用后将替换当前字段开关、顺序和自定义字段配置。` });
+    this.contentEl.createEl("p", { text: "所有原有账目中的旧自定义属性会被永久删除；CSV中多余且不属于附带配置的字段也不会写入。", cls: "setting-item-description mod-warning" });
+    const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
+    new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
+    const importWithCleanup = new ButtonComponent(actions).setButtonText("清理旧字段并导入").setDestructive();
+    importWithCleanup.buttonEl.addClass("bookkeeping-danger-button");
+    importWithCleanup.onClick(() => {
+      this.close();
+      this.onConfirm();
+    });
+  }
+}
+
 class CsvExportModal extends Modal {
   private exportScope: "all" | "month" | "filtered" | "custom" = "month";
   private destination: "vault" | "computer" = "vault";
@@ -655,6 +792,7 @@ class CsvExportModal extends Modal {
   private fileName: string;
   private dateFrom = "";
   private dateTo = "";
+  private includeFieldConfig = false;
 
   constructor(
     app: App,
@@ -695,6 +833,10 @@ class CsvExportModal extends Modal {
       toSetting.settingEl.toggleClass("bookkeeping-hidden", !visible);
     };
     refreshRange();
+    new Setting(this.contentEl)
+      .setName("附带录入字段配置")
+      .setDesc("勾选后，CSV会包含内置字段开关、录入顺序，以及自定义字段的类型、预设选项和启用状态。")
+      .addToggle((toggle) => toggle.setValue(this.includeFieldConfig).onChange((value) => this.includeFieldConfig = value));
     const destinationSetting = new Setting(this.contentEl).setName("导出位置").addDropdown((dropdown) => {
       const options: Record<string, string> = { vault: "Obsidian仓库内" };
       if (Platform.isDesktopApp) options.computer = "电脑任意位置";
@@ -705,7 +847,7 @@ class CsvExportModal extends Modal {
     });
     const folderSetting = new Setting(this.contentEl).setName("仓库内导出路径").addText((text) => {
       text.setValue(this.folder).onChange((value) => this.folder = value.trim());
-      attachVaultFolderSuggestions(this.app, text.inputEl);
+      new VaultFolderSuggest(this.app, text.inputEl);
     });
     new Setting(this.contentEl).setName("文件名").addText((text) => text.setValue(this.fileName).onChange((value) => this.fileName = value.trim()));
     const refreshDestination = (): void => {
@@ -721,7 +863,11 @@ class CsvExportModal extends Modal {
         error.empty();
         if (this.destination === "vault" && !this.folder) throw new Error("保存目录不能为空");
         if (!this.fileName) throw new Error("文件名不能为空");
-        const options: { folder: string; fileName: string; dateFrom?: string; dateTo?: string; transactionIds?: string[] } = { folder: this.folder, fileName: this.fileName };
+        const options: { folder: string; fileName: string; dateFrom?: string; dateTo?: string; transactionIds?: string[]; includeFieldConfig?: boolean } = {
+          folder: this.folder,
+          fileName: this.fileName,
+          includeFieldConfig: this.includeFieldConfig
+        };
         if (this.exportScope === "month") {
           const days = new Date(Number(this.month.slice(0, 4)), Number(this.month.slice(5, 7)), 0).getDate();
           options.dateFrom = `${this.month}-01`;
@@ -820,7 +966,9 @@ class TagManagerModal extends Modal {
         save.addEventListener("click", submit);
         input.addEventListener("keydown", (event) => { if (event.key === "Enter") submit(); else if (event.key === "Escape") void this.renderTags(); });
       });
-      new ButtonComponent(row).setIcon("trash-2").setTooltip(`删除#${tag}`).setDestructive().onClick(() => {
+      const removeTag = new ButtonComponent(row).setIcon("trash-2").setTooltip(`删除#${tag}`).setDestructive();
+      removeTag.buttonEl.addClass("bookkeeping-danger-button");
+      removeTag.onClick(() => {
         new ConfirmTagDeleteModal(this.app, tag, count,
           () => void this.runTagAction(tag, null),
           () => void this.runDeleteTransactions(tag)).open();
@@ -896,7 +1044,9 @@ class ConfirmTagDeleteModal extends Modal {
       this.close();
       this.onRemoveTag();
     });
-    new ButtonComponent(actions).setButtonText("删除相关账目").setDestructive().onClick(() => {
+    const removeTransactions = new ButtonComponent(actions).setButtonText("删除相关账目").setDestructive();
+    removeTransactions.buttonEl.addClass("bookkeeping-danger-button");
+    removeTransactions.onClick(() => {
       this.close();
       this.onDeleteTransactions();
     });
@@ -1106,7 +1256,9 @@ class AnnualChartSettingsModal extends Modal {
     const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
     new ButtonComponent(actions).setButtonText("隐藏图表").setIcon("eye-off").onClick(() => { void (async () => { this.chart.visible = false; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
-    new ButtonComponent(actions).setButtonText("删除图表").setDestructive().onClick(() => { void (async () => { this.plugin.settings.annualChartConfigs = this.plugin.settings.annualChartConfigs.filter((item) => item.id !== this.chart.id); await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
+    const removeChart = new ButtonComponent(actions).setButtonText("删除图表").setDestructive();
+    removeChart.buttonEl.addClass("bookkeeping-danger-button");
+    removeChart.onClick(() => { void (async () => { this.plugin.settings.annualChartConfigs = this.plugin.settings.annualChartConfigs.filter((item) => item.id !== this.chart.id); await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
     new ButtonComponent(actions).setButtonText("保存").setCta().onClick(() => { void (async () => { this.chart.metric = this.metric; this.chart.title = ANNUAL_METRICS[this.metric]; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
   }
 }

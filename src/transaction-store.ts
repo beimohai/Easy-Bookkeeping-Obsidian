@@ -1,5 +1,6 @@
 import { App, TFile, normalizePath, parseYaml, stringifyYaml } from "obsidian";
-import type { BookkeepingSettings, MonthSummary, Transaction, TransactionDraft } from "./types";
+import { customFieldDefaultValue, customFieldKey, isReservedTransactionProperty } from "./types";
+import type { BookkeepingSettings, CustomFieldConfig, EntryField, MonthSummary, Transaction, TransactionDraft } from "./types";
 import { errorMessageZh, escapeCsv, monthOf, normalizeDate, normalizeTime, parseCsv, roundMoney, safeFolder, sanitizeFileName } from "./utils";
 
 type Frontmatter = Record<string, unknown>;
@@ -21,9 +22,53 @@ export interface ImportResult {
   failureReport?: TFile;
 }
 
+export interface LegacyConversionResult {
+  converted: number;
+  skipped: number;
+  failed: number;
+  total: number;
+  failureFolder?: string;
+}
+
+export interface ExternalLegacyImportResult {
+  imported: number;
+  skipped: number;
+  failed: number;
+  total: number;
+  failureFolder?: string;
+}
+
+interface LegacyFailureSource {
+  name: string;
+  path: string;
+  reason: string;
+  content: string;
+}
+
+interface VaultLegacyCandidate {
+  file: TFile;
+  content: string;
+  draft?: TransactionDraft;
+  reason?: string;
+}
+
 export interface CsvMetadataAnalysis {
   differences: string[];
   hasDifferences: boolean;
+}
+
+export interface CsvCustomFieldConfiguration {
+  version: 1;
+  builtInEnabled: {
+    account: boolean;
+    type: boolean;
+    necessity: boolean;
+    category: boolean;
+    note: boolean;
+    attachments: boolean;
+  };
+  fields: CustomFieldConfig[];
+  optionFieldOrder: EntryField[];
 }
 
 export interface PendingDelete {
@@ -37,7 +82,10 @@ export interface ExportOptions {
   dateFrom?: string;
   dateTo?: string;
   transactionIds?: string[];
+  includeFieldConfig?: boolean;
 }
+
+const CSV_FIELD_CONFIG_PREFIX = "#EasyBookkeepingCustomFields=";
 
 export class TransactionStore {
   constructor(private readonly app: App, private readonly getSettings: () => BookkeepingSettings) {}
@@ -60,9 +108,9 @@ export class TransactionStore {
     return transactions.sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`));
   }
 
-  async create(draft: TransactionDraft): Promise<TFile> {
+  async create(draft: TransactionDraft, skipContentCheck = false): Promise<TFile> {
     const settings = this.getSettings();
-    await this.assertContentAvailable(draft.title, "", draft.date);
+    if (!skipContentCheck) await this.assertContentAvailable(draft.title, "", draft.date);
     const [year = "0000", month = "00", day = "00"] = draft.date.split("-");
     const folder = normalizePath(`${safeFolder(settings.ledgerFolder)}/${year}/${month}/${day}`);
     await this.ensureFolder(folder);
@@ -70,8 +118,8 @@ export class TransactionStore {
     const timePart = draft.time.replace(":", "");
     const baseName = `${timePart}-${sanitizeFileName(draft.title)}`;
     const path = this.uniquePath(folder, baseName);
-    const id = this.makeId();
-    const content = `---\n${stringifyYaml(this.toFrontmatter(draft, id))}---\n${this.attachmentSection(draft.attachments)}`;
+    const attachments = settings.enableEntryAttachments ? draft.attachments : [];
+    const content = `---\n${stringifyYaml(this.toFrontmatter(draft))}---\n${this.attachmentSection(attachments)}`;
     return this.app.vault.create(path, content);
   }
 
@@ -82,14 +130,14 @@ export class TransactionStore {
     const dateChanged = draft.date !== transaction.date;
     await this.app.fileManager.processFrontMatter(transaction.file, (frontmatter) => {
       const properties = frontmatter as Frontmatter;
-      const next = this.toFrontmatter(draft, transaction.id === transaction.file.path ? this.makeId() : transaction.id);
+      const next = this.toFrontmatter(draft);
       delete properties["日期"];
       delete properties["时刻"];
-      if (draft.type !== "转账") delete properties["目标账户"];
-      if (!draft.attachments.length) delete properties["附件"];
+      for (const key of ["记账插件", "账目ID", "类型", "标签", "分类", "账户", "目标账户", "内容", "金额", "算式", "备注", "附件", "tags"]) delete properties[key];
+      for (const field of this.getSettings().customFields) delete properties[field.property];
       Object.assign(properties, next);
     });
-    await this.syncAttachmentSection(transaction.file, draft.attachments);
+    await this.syncAttachmentSection(transaction.file, this.getSettings().enableEntryAttachments ? draft.attachments : []);
     if (dateChanged && this.app.vault.getAbstractFileByPath(transaction.file.path)) {
       const [year = "0000", month = "00", day = "00"] = draft.date.split("-");
       const folder = normalizePath(`${safeFolder(this.getSettings().ledgerFolder)}/${year}/${month}/${day}`);
@@ -150,70 +198,69 @@ export class TransactionStore {
   }
 
   async legacyFileCount(folder = ""): Promise<number> {
-    const prefix = folder ? `${safeFolder(folder)}/` : "";
-    return (await this.list()).filter((item) => item.legacy && (!prefix || item.file.path.startsWith(prefix))).length;
+    return (await this.scanVaultLegacyCandidates(folder)).length;
   }
 
-  async convertLegacyFiles(onProgress?: (done: number, total: number) => void, folder = ""): Promise<number> {
-    const prefix = folder ? `${safeFolder(folder)}/` : "";
-    const legacy = (await this.list()).filter((item) => item.legacy && (!prefix || item.file.path.startsWith(prefix)));
-    for (let index = 0; index < legacy.length; index++) {
-      const item = legacy[index] as Transaction;
-      await this.update(item, {
-        date: item.date,
-        time: item.time,
-        type: item.type,
-        necessity: item.necessity,
-        category: item.category || "未分类",
-        account: item.account || this.getSettings().defaultAccount,
-        targetAccount: item.targetAccount,
-        title: item.title,
-        amount: item.amount,
-        expression: item.expression,
-        note: item.note,
-        tags: item.tags,
-        attachments: item.attachments
-      });
-      if ((index + 1) % 10 === 0 || index + 1 === legacy.length) onProgress?.(index + 1, legacy.length);
+  async convertLegacyFiles(onProgress?: (done: number, total: number) => void, folder = ""): Promise<LegacyConversionResult> {
+    const candidates = await this.scanVaultLegacyCandidates(folder);
+    const existing = new Set((await this.list()).filter((item) => !item.legacy).map((item) => this.fingerprint(item)));
+    const failures: LegacyFailureSource[] = [];
+    let converted = 0, skipped = 0;
+    for (let index = 0; index < candidates.length; index++) {
+      const candidate = candidates[index] as VaultLegacyCandidate;
+      const draft = candidate.draft;
+      if (!draft) {
+        failures.push({ name: candidate.file.name, path: candidate.file.path, reason: candidate.reason ?? "无法读取旧版账目属性", content: candidate.content });
+      } else {
+        try {
+          const fingerprint = this.fingerprint(draft);
+          if (existing.has(fingerprint)) skipped++;
+          else {
+            await this.create(draft, true);
+            existing.add(fingerprint);
+            converted++;
+          }
+        } catch (error) {
+          failures.push({ name: candidate.file.name, path: candidate.file.path, reason: errorMessageZh(error, "转换失败"), content: candidate.content });
+        }
+      }
+      if ((index + 1) % 10 === 0 || index + 1 === candidates.length) onProgress?.(index + 1, candidates.length);
     }
-    return legacy.length;
+    const failureFolder = failures.length ? await this.writeLegacyFailureFolder(failures) : undefined;
+    return { converted, skipped, failed: failures.length, total: candidates.length, failureFolder };
   }
 
-  async importExternalLegacyMarkdown(files: Array<{ name: string; content: string }>, onProgress?: (done: number, total: number) => void): Promise<{ imported: number; failed: number }> {
+  async importExternalLegacyMarkdown(files: Array<{ name: string; path?: string; content: string }>, onProgress?: (done: number, total: number) => void): Promise<ExternalLegacyImportResult> {
     const existing = new Set((await this.list()).map((item) => this.fingerprint(item)));
-    let imported = 0, failed = 0;
+    const failures: LegacyFailureSource[] = [];
+    let imported = 0, skipped = 0;
     for (let index = 0; index < files.length; index++) {
-      const source = files[index] as { name: string; content: string };
+      const source = files[index] as { name: string; path?: string; content: string };
       try {
         const match = source.content.match(/^---\s*\n([\s\S]*?)\n---/);
         if (!match?.[1]) throw new Error("缺少Properties");
         const parsed: unknown = parseYaml(match[1]);
         if (!isFrontmatter(parsed)) throw new Error("Properties格式不合法");
         const frontmatter = parsed;
-        const typeValue = String(frontmatter["类型"] ?? "");
-        const type = typeValue === "收入" || typeValue === "转账" ? typeValue : typeValue === "支出" ? "支出" : null;
-        const date = normalizeDate(frontmatter["日期"] ?? frontmatter["时间"]);
-        const amount = Number(frontmatter["金额"]);
-        if (!type || !date || !Number.isFinite(amount) || amount === 0) throw new Error("缺少有效的类型、日期或金额");
-        const rawNote = String(frontmatter["备注"] ?? "");
-        const extracted = this.extractExpression(rawNote, String(frontmatter["算式"] ?? ""), Math.abs(roundMoney(amount)));
-        const tagsValue = frontmatter["tags"];
-        const tags = (Array.isArray(tagsValue) ? tagsValue.map(String) : String(tagsValue ?? "").split(/[ ,，]+/)).map((tag) => tag.replace(/^#/, "")).filter((tag) => tag && tag !== "记账");
-        const draft: TransactionDraft = {
-          date, time: String(frontmatter["时刻"] ?? normalizeTime(frontmatter["时间"])), type,
-          necessity: frontmatter["标签"] === "非必需" ? "非必需" : "必需",
-          category: String(frontmatter["分类"] ?? "未分类"), account: String(frontmatter["账户"] ?? this.getSettings().defaultAccount),
-          targetAccount: String(frontmatter["目标账户"] ?? ""), title: String(frontmatter["内容"] ?? source.name.replace(/\.md$/i, "")),
-          amount: Math.abs(roundMoney(amount)), expression: extracted.expression, note: extracted.note,
-          tags: [...new Set(tags)], attachments: this.readStringList(frontmatter["附件"])
-        };
+        const draft = this.legacyDraftFromProperties(frontmatter, source.path ?? source.name, source.name.replace(/\.md$/i, ""));
         const fingerprint = this.fingerprint(draft);
-        if (existing.has(fingerprint)) throw new Error("重复账目");
-        await this.create(draft); existing.add(fingerprint); imported++;
-      } catch { failed++; }
+        if (existing.has(fingerprint)) {
+          skipped++;
+        } else {
+          await this.create(draft); existing.add(fingerprint); imported++;
+        }
+      } catch (error) {
+        failures.push({
+          name: source.name,
+          path: source.path ?? source.name,
+          reason: errorMessageZh(error, "无法转换该文件"),
+          content: source.content
+        });
+      }
       if ((index + 1) % 10 === 0 || index + 1 === files.length) onProgress?.(index + 1, files.length);
     }
-    return { imported, failed };
+    const failureFolder = failures.length ? await this.writeLegacyFailureFolder(failures) : undefined;
+    return { imported, skipped, failed: failures.length, total: files.length, failureFolder };
   }
 
   async rewriteExpressionStorage(onProgress?: (done: number, total: number) => void): Promise<number> {
@@ -281,6 +328,41 @@ export class TransactionStore {
       await this.update(item, draft);
     }
     return transactions.length;
+  }
+
+  async renameCustomFieldValueGlobally(property: string, oldValue: string, newValue: string): Promise<number> {
+    if (!property || !oldValue || !newValue || oldValue === newValue) return 0;
+    const root = `${safeFolder(this.getSettings().ledgerFolder)}/`;
+    const files = this.app.vault.getMarkdownFiles().filter((file) => {
+      if (!file.path.startsWith(root)) return false;
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      return isFrontmatter(frontmatter) && String(frontmatter[property] ?? "") === oldValue;
+    });
+    for (const file of files) {
+      await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+        if (String((frontmatter as Frontmatter)[property] ?? "") === oldValue) (frontmatter as Frontmatter)[property] = newValue;
+      });
+    }
+    return files.length;
+  }
+
+  async clearCustomFieldProperties(properties: string[], onProgress?: (done: number, total: number) => void): Promise<number> {
+    const propertySet = new Set(properties.map((property) => property.trim()).filter(Boolean));
+    if (!propertySet.size) return 0;
+    const root = `${safeFolder(this.getSettings().ledgerFolder)}/`;
+    const files = this.app.vault.getMarkdownFiles().filter((file) => {
+      if (!file.path.startsWith(root)) return false;
+      const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      return isFrontmatter(frontmatter) && [...propertySet].some((property) => property in frontmatter);
+    });
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index] as TFile;
+      await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+        for (const property of propertySet) delete (frontmatter as Frontmatter)[property];
+      });
+      if ((index + 1) % 10 === 0 || index + 1 === files.length) onProgress?.(index + 1, files.length);
+    }
+    return files.length;
   }
 
   async syncAttachmentPreviews(): Promise<number> {
@@ -376,6 +458,8 @@ export class TransactionStore {
   }
 
   async buildCsv(options: ExportOptions = {}): Promise<string> {
+    const settings = this.getSettings();
+    const customFields = settings.customFields;
     const allowedIds = options.transactionIds ? new Set(options.transactionIds) : null;
     const transactions = (await this.list()).filter((item) => {
       if (allowedIds && !allowedIds.has(item.id)) return false;
@@ -397,14 +481,44 @@ export class TransactionStore {
       item.note,
       item.tags.join(" "),
       item.attachments.join(" | "),
+      ...customFields.map((field) => item.customValues[field.id] ?? ""),
       item.file.path
     ].map(escapeCsv).join(","));
-    const csv = ["日期,时间,类型,标签,分类,账户,目标账户,内容,金额,算式,备注,附加标签,附件,文件", ...rows].join("\n");
-    return `\uFEFF${csv}`;
+    const header = ["日期", "时间", "类型", "标签", "分类", "账户", "目标账户", "内容", "金额", "算式", "备注", "附加标签", "附件", ...customFields.map((field) => field.name), "文件"];
+    const csv = [header.map(escapeCsv).join(","), ...rows].join("\n");
+    const configuration = options.includeFieldConfig
+      ? `${CSV_FIELD_CONFIG_PREFIX}${encodeURIComponent(JSON.stringify({
+        version: 1,
+        builtInEnabled: {
+          account: settings.enableAccount,
+          type: settings.enableType,
+          necessity: settings.enableNecessity,
+          category: settings.enableCategory,
+          note: settings.enableNote,
+          attachments: settings.enableEntryAttachments
+        },
+        fields: customFields.map((field) => ({ ...field, options: [...field.options] })),
+        optionFieldOrder: [...settings.optionFieldOrder]
+      } satisfies CsvCustomFieldConfiguration))}\n`
+      : "";
+    return `\uFEFF${configuration}${csv}`;
+  }
+
+  inspectCsvCustomFieldConfiguration(text: string): CsvCustomFieldConfiguration | null {
+    return this.splitCsvDocument(text).configuration;
+  }
+
+  validateCsvImportStructure(text: string): void {
+    const rows = parseCsv(this.splitCsvDocument(text).body);
+    if (rows.length < 2) throw new Error("CSV没有可导入的数据行");
+    const headers = (rows[0] ?? []).map((header) => header.toLocaleLowerCase("zh-CN").replace(/[\s_-]/g, ""));
+    const hasDate = headers.some((header) => ["日期", "交易日期", "date", "datetime", "时间"].includes(header));
+    const hasAmount = headers.some((header) => ["金额", "交易金额", "amount", "money"].includes(header));
+    if (!hasDate || !hasAmount) throw new Error("CSV至少需要日期和金额两列");
   }
 
   inspectCsvMetadata(text: string): CsvMetadataAnalysis {
-    const rows = parseCsv(text);
+    const rows = parseCsv(this.splitCsvDocument(text).body);
     if (rows.length < 2) return { differences: [], hasDifferences: false };
     const headers = (rows[0] ?? []).map((header) => header.toLocaleLowerCase("zh-CN").replace(/[\s_-]/g, ""));
     const find = (...aliases: string[]): number => headers.findIndex((header) => aliases.includes(header));
@@ -427,11 +541,17 @@ export class TransactionStore {
     if (unknownNecessity.length) differences.push(`未知必要性：${unknownNecessity.join("、")}`);
     if (unknownCategories.length) differences.push(`仓库中没有的分类：${unknownCategories.join("、")}`);
     if (unknownAccounts.length) differences.push(`仓库中没有的账户：${unknownAccounts.join("、")}`);
+    for (const field of settings.customFields.filter((item) => item.kind === "select")) {
+      const aliases = [field.name, field.property].map((value) => value.toLocaleLowerCase("zh-CN").replace(/[\s_-]/g, ""));
+      const index = headers.findIndex((header) => aliases.includes(header));
+      const unknown = unique(index).filter((value) => !field.options.includes(value));
+      if (unknown.length) differences.push(`自定义字段“${field.name}”中没有的预设：${unknown.join("、")}`);
+    }
     return { differences, hasDifferences: differences.length > 0 };
   }
 
   async importCsv(text: string, onProgress?: (done: number, total: number) => void, normalizeMetadata = false): Promise<ImportResult> {
-    const rows = parseCsv(text);
+    const rows = parseCsv(this.splitCsvDocument(text).body);
     if (rows.length < 2) throw new Error("CSV没有可导入的数据行");
     const headers = (rows[0] ?? []).map((header) => header.toLocaleLowerCase("zh-CN").replace(/[\s_-]/g, ""));
     const aliases: Record<string, string[]> = {
@@ -452,6 +572,10 @@ export class TransactionStore {
     const indexOf = (key: string): number => headers.findIndex((header) => (aliases[key] ?? []).includes(header));
     const indexes: Record<string, number> = {};
     for (const key of Object.keys(aliases)) indexes[key] = indexOf(key);
+    const customIndexes = Object.fromEntries(this.getSettings().customFields.map((field) => {
+      const aliases = [field.name, field.property].map((value) => value.toLocaleLowerCase("zh-CN").replace(/[\s_-]/g, ""));
+      return [field.id, headers.findIndex((header) => aliases.includes(header))];
+    }));
     if ((indexes["date"] ?? -1) < 0 || (indexes["amount"] ?? -1) < 0) throw new Error("CSV至少需要日期和金额两列");
     const existing = new Set((await this.list()).map((item) => this.fingerprint(item)));
     const failures: ImportFailure[] = [];
@@ -507,7 +631,13 @@ export class TransactionStore {
           expression: get("expression") || String(amount),
           note: get("note"),
           tags: [...new Set(get("tags").split(/[\s,，]+/).map((tag) => tag.replace(/^#/, "")).filter(Boolean))],
-          attachments: get("attachments").split(/[|,，\n]+/).map((path) => path.trim()).filter(Boolean)
+          attachments: get("attachments").split(/[|,，\n]+/).map((path) => path.trim()).filter(Boolean),
+          customValues: Object.fromEntries(this.getSettings().customFields.map((field) => {
+            const customIndex = customIndexes[field.id] ?? -1;
+            const value = customIndex >= 0 ? String(row[customIndex] ?? "").trim() : "";
+            const normalized = normalizeMetadata && field.kind === "select" && value && !field.options.includes(value) ? "" : value;
+            return [field.id, normalized || customFieldDefaultValue(field)];
+          }))
         };
         const fingerprint = this.fingerprint(draft);
         if (existing.has(fingerprint)) {
@@ -527,39 +657,95 @@ export class TransactionStore {
     return { imported, skipped, failures: realFailures, failureReport };
   }
 
+  private splitCsvDocument(text: string): { body: string; configuration: CsvCustomFieldConfiguration | null } {
+    const normalized = text.replace(/^\uFEFF/, "");
+    const newline = normalized.indexOf("\n");
+    const firstLine = (newline >= 0 ? normalized.slice(0, newline) : normalized).replace(/\r$/, "");
+    if (!firstLine.startsWith(CSV_FIELD_CONFIG_PREFIX)) return { body: text, configuration: null };
+    const body = newline >= 0 ? normalized.slice(newline + 1) : "";
+    try {
+      const parsed: unknown = JSON.parse(decodeURIComponent(firstLine.slice(CSV_FIELD_CONFIG_PREFIX.length)));
+      const configuration = this.normalizeCsvCustomFieldConfiguration(parsed);
+      return { body, configuration };
+    } catch {
+      return { body, configuration: null };
+    }
+  }
+
+  private normalizeCsvCustomFieldConfiguration(value: unknown): CsvCustomFieldConfiguration | null {
+    if (!value || typeof value !== "object") return null;
+    const raw = value as Record<string, unknown>;
+    if (raw["version"] !== 1 || !Array.isArray(raw["fields"]) || !Array.isArray(raw["optionFieldOrder"]) || !raw["builtInEnabled"] || typeof raw["builtInEnabled"] !== "object") return null;
+    const rawBuiltIn = raw["builtInEnabled"] as Record<string, unknown>;
+    const builtInKeys = ["account", "type", "necessity", "category", "note", "attachments"] as const;
+    if (builtInKeys.some((key) => typeof rawBuiltIn[key] !== "boolean")) return null;
+    const builtInEnabled: CsvCustomFieldConfiguration["builtInEnabled"] = {
+      account: rawBuiltIn["account"] as boolean,
+      type: rawBuiltIn["type"] as boolean,
+      necessity: rawBuiltIn["necessity"] as boolean,
+      category: rawBuiltIn["category"] as boolean,
+      note: rawBuiltIn["note"] as boolean,
+      attachments: rawBuiltIn["attachments"] as boolean
+    };
+    const ids = new Set<string>();
+    const properties = new Set<string>();
+    const fields: CustomFieldConfig[] = [];
+    for (const item of raw["fields"]) {
+      if (!item || typeof item !== "object") return null;
+      const source = item as Record<string, unknown>;
+      const id = String(source["id"] ?? "").trim();
+      const name = String(source["name"] ?? "").trim();
+      const property = String(source["property"] ?? name).trim();
+      const normalizedProperty = property.toLocaleLowerCase("zh-CN");
+      if (!/^[a-zA-Z0-9_-]+$/.test(id) || !name || !property || isReservedTransactionProperty(normalizedProperty) || ids.has(id) || properties.has(normalizedProperty)) return null;
+      const kind = source["kind"] === "select" ? "select" : "text";
+      const options = kind === "select" ? [...new Set((Array.isArray(source["options"]) ? source["options"] : []).map(String).map((option) => option.trim()).filter(Boolean))] : [];
+      const rawCodes = source["optionCodes"] && typeof source["optionCodes"] === "object" ? source["optionCodes"] as Record<string, unknown> : {};
+      const optionCodes = Object.fromEntries(options.map((option, index) => [option, String(rawCodes[option] ?? index + 1).trim() || String(index + 1)]));
+      const defaultValue = options.includes(String(source["defaultValue"] ?? "")) ? String(source["defaultValue"]) : (options[0] ?? "");
+      const loadedInitial = Array.isArray(source["initialOptions"])
+        ? [...new Set(source["initialOptions"].map(String).map((option) => option.trim()).filter(Boolean))]
+        : [];
+      const initialOptions = kind === "select" && loadedInitial.length ? loadedInitial : [...options];
+      const rawInitialCodes = source["initialOptionCodes"] && typeof source["initialOptionCodes"] === "object" ? source["initialOptionCodes"] as Record<string, unknown> : {};
+      const initialOptionCodes = Object.fromEntries(initialOptions.map((option, index) => [option, String(rawInitialCodes[option] ?? optionCodes[option] ?? index + 1).trim() || String(index + 1)]));
+      const initialDefaultValue = initialOptions.includes(String(source["initialDefaultValue"] ?? "")) ? String(source["initialDefaultValue"]) : (initialOptions[0] ?? "");
+      ids.add(id);
+      properties.add(normalizedProperty);
+      fields.push({ id, name, property, kind, options, optionCodes, defaultValue, initialOptions, initialOptionCodes, initialDefaultValue, enabled: source["enabled"] !== false });
+    }
+    const builtinOrder: EntryField[] = ["date", "account", "type", "necessity", "category", "title", "amount", "note", "attachments"];
+    const customKeys = fields.map((field) => customFieldKey(field.id));
+    const allowed = new Set<EntryField>([...builtinOrder, ...customKeys]);
+    const importedOrder = raw["optionFieldOrder"]
+      .map(String)
+      .filter((item): item is EntryField => allowed.has(item as EntryField));
+    const optionFieldOrder = [...new Set([...importedOrder, ...builtinOrder, ...customKeys])];
+    return { version: 1, builtInEnabled, fields, optionFieldOrder };
+  }
+
   private fromFrontmatter(file: TFile, frontmatter: Frontmatter): Transaction | null {
-    const typeValue = String(frontmatter["类型"] ?? "").trim();
-    if (!typeValue) return null;
+    const typeValue = String(frontmatter["类型"] ?? this.getSettings().defaultType).trim() || this.getSettings().defaultType;
     const date = normalizeDate(frontmatter["日期"] ?? frontmatter["时间"]);
     const amount = Number(frontmatter["金额"]);
     if (!date || !Number.isFinite(amount)) return null;
     const necessityValue = String(frontmatter["标签"] ?? "").trim();
     const necessity = necessityValue || this.getSettings().defaultNecessity;
-    const tagsValue = frontmatter["tags"];
-    const frontmatterTags = Array.isArray(tagsValue)
-      ? tagsValue.map(String)
-      : typeof tagsValue === "string" ? tagsValue.split(/[ ,，]+/).filter(Boolean) : [];
+    const frontmatterTags = this.readFrontmatterTags(frontmatter["tags"]);
     const rawNote = String(frontmatter["备注"] ?? "");
     const extracted = this.extractExpression(rawNote, String(frontmatter["算式"] ?? ""), Math.abs(roundMoney(amount)));
     const note = extracted.note;
     const noteTags = [...note.matchAll(/#([\p{L}\p{N}_-]+)/gu)].map((match) => match[1] ?? "").filter(Boolean);
     const tags = [...new Set([...frontmatterTags, ...noteTags].map((tag) => tag.replace(/^#/, "")))];
     return {
-      id: String(frontmatter["账目ID"] ?? file.path),
+      id: file.path,
       file,
-      legacy: frontmatter["记账插件"] !== true
-        || "日期" in frontmatter
-        || "时刻" in frontmatter
-        || !frontmatter["账目ID"]
-        || !frontmatter["分类"]
-        || !frontmatter["账户"]
-        || !frontmatter["内容"]
-        || !("算式" in frontmatter),
+      legacy: !this.isCurrentTransactionProperties(frontmatter),
       date,
       time: String(frontmatter["时刻"] ?? normalizeTime(frontmatter["时间"])),
       type: typeValue,
       necessity,
-      category: String(frontmatter["分类"] ?? "未分类"),
+      category: String(frontmatter["分类"] ?? (this.typeEffect(typeValue) === "positive" ? this.getSettings().defaultIncomeCategory : this.getSettings().defaultCategory)),
       account: String(frontmatter["账户"] ?? this.getSettings().defaultAccount),
       targetAccount: String(frontmatter["目标账户"] ?? ""),
       title: String(frontmatter["内容"] ?? file.basename),
@@ -567,26 +753,42 @@ export class TransactionStore {
       expression: extracted.expression,
       note,
       tags,
-      attachments: this.readStringList(frontmatter["附件"])
+      attachments: this.readStringList(frontmatter["附件"]),
+      customValues: Object.fromEntries(this.getSettings().customFields.map((field) => [field.id, String(frontmatter[field.property] ?? "").trim() || customFieldDefaultValue(field)]))
     };
   }
 
-  private toFrontmatter(draft: TransactionDraft, id: string): Frontmatter {
+  private toFrontmatter(draft: TransactionDraft): Frontmatter {
+    const settings = this.getSettings();
+    const note = !draft.note || draft.note === "无" ? "" : draft.note.trim();
+    const tags = draft.tags.filter((tag) => tag.replace(/^#/, "").trim() !== "记账");
+    const customProperties = new Map(settings.customFields
+      .filter((field) => field.enabled)
+      .map((field) => [field.id, field.property] as const));
+    for (const [id, property] of Object.entries(draft.customProperties ?? {})) {
+      if (id && property.trim()) customProperties.set(id, property.trim());
+    }
     return {
       "记账插件": true,
-      "账目ID": id,
       "时间": `${draft.date} ${draft.time}`,
-      "类型": draft.type,
-      "标签": draft.necessity,
-      "分类": draft.category || "未分类",
-      "账户": draft.account || this.getSettings().defaultAccount,
-      ...(draft.type === "转账" ? { "目标账户": draft.targetAccount } : {}),
+      ...(settings.enableType ? { "类型": draft.type } : {}),
+      ...(settings.enableNecessity && draft.type !== "转账" ? { "标签": draft.necessity } : {}),
+      ...(settings.enableCategory && draft.type !== "转账" ? { "分类": draft.category || "未分类" } : {}),
+      ...(settings.enableAccount ? { "账户": draft.account || settings.defaultAccount } : {}),
+      ...(settings.enableAccount && draft.type === "转账" ? { "目标账户": draft.targetAccount } : {}),
       "内容": draft.title,
       "金额": roundMoney(draft.amount),
-      ...(this.getSettings().saveExpressionInNote ? { "算式": this.normalizedExpression(draft) } : {}),
-      "备注": this.storedNote(draft),
-      "tags": ["记账", ...draft.tags.filter((tag) => tag !== "记账")],
-      ...(draft.attachments.length ? { "附件": draft.attachments } : {})
+      ...(settings.enableNote && settings.saveExpressionInNote ? { "算式": this.normalizedExpression(draft) } : {}),
+      ...(settings.enableNote && (note || settings.saveExpressionInNote) ? { "备注": this.storedNote(draft) } : {}),
+      ...(tags.length ? { "tags": tags } : {}),
+      ...(settings.enableEntryAttachments && draft.attachments.length ? { "附件": draft.attachments } : {}),
+      ...Object.fromEntries([...customProperties]
+        .map(([id, property]) => {
+          const field = settings.customFields.find((item) => item.id === id);
+          const value = String(draft.customValues[id] ?? "").trim() || (field ? customFieldDefaultValue(field) : "");
+          return [property, value] as const;
+        })
+        .filter(([, value]) => value))
     };
   }
 
@@ -626,6 +828,115 @@ export class TransactionStore {
     return [];
   }
 
+  private readFrontmatterTags(value: unknown): string[] {
+    const tags = Array.isArray(value)
+      ? value.map(String)
+      : typeof value === "string" ? value.split(/[ ,，]+/) : [];
+    return tags.map((tag) => tag.replace(/^#/, "").trim()).filter(Boolean);
+  }
+
+  private isCurrentTransactionProperties(frontmatter: Frontmatter): boolean {
+    const marker = frontmatter["记账插件"] === true || this.readFrontmatterTags(frontmatter["tags"]).includes("记账");
+    return marker && !("日期" in frontmatter) && !("时刻" in frontmatter);
+  }
+
+  private legacyDraftFromProperties(frontmatter: Frontmatter, sourcePath: string, fallbackTitle: string): TransactionDraft {
+    const settings = this.getSettings();
+    const date = normalizeDate(frontmatter["日期"] ?? frontmatter["时间"]) ?? this.inferDateFromPath(sourcePath);
+    if (!date) throw new Error("缺少有效日期，且无法从年月日文件夹补全");
+    const signedAmount = Number(frontmatter["金额"]);
+    if (!Number.isFinite(signedAmount)) throw new Error("缺少有效金额");
+    const type = String(frontmatter["类型"] ?? settings.defaultType).trim() || settings.defaultType;
+    const rawMoment = String(frontmatter["时刻"] ?? "").trim();
+    const directTime = rawMoment.match(/^(\d{1,2}):(\d{2})$/);
+    const time = directTime && Number(directTime[1]) <= 23 && Number(directTime[2]) <= 59
+      ? `${String(Number(directTime[1])).padStart(2, "0")}:${directTime[2]}`
+      : normalizeTime(frontmatter["时间"]);
+    const rawNote = String(frontmatter["备注"] ?? "");
+    const extracted = this.extractExpression(rawNote, String(frontmatter["算式"] ?? ""), Math.abs(roundMoney(signedAmount)));
+    const frontmatterTags = this.readFrontmatterTags(frontmatter["tags"]);
+    const noteTags = [...extracted.note.matchAll(/#([\p{L}\p{N}_-]+)/gu)].map((match) => match[1] ?? "").filter(Boolean);
+    const tags = [...new Set([...frontmatterTags, ...noteTags]
+      .map((tag) => tag.replace(/^#/, "").trim())
+      .filter((tag) => tag && tag !== "记账"))];
+    return {
+      date,
+      time,
+      type,
+      necessity: String(frontmatter["标签"] ?? settings.defaultNecessity).trim() || settings.defaultNecessity,
+      category: String(frontmatter["分类"] ?? (this.typeEffect(type) === "positive" ? settings.defaultIncomeCategory : settings.defaultCategory)),
+      account: String(frontmatter["账户"] ?? settings.defaultAccount),
+      targetAccount: String(frontmatter["目标账户"] ?? ""),
+      title: String(frontmatter["内容"] ?? fallbackTitle).trim() || fallbackTitle,
+      amount: Math.abs(roundMoney(signedAmount)),
+      expression: extracted.expression,
+      note: extracted.note === "无" ? "" : extracted.note,
+      tags,
+      attachments: this.readStringList(frontmatter["附件"]),
+      customValues: Object.fromEntries(settings.customFields.map((field) => [field.id, String(frontmatter[field.property] ?? "").trim() || customFieldDefaultValue(field)]))
+    };
+  }
+
+  private inferDateFromPath(sourcePath: string): string | null {
+    const directories = sourcePath.replace(/\\/g, "/").split("/").slice(0, -1);
+    for (let index = directories.length - 3; index >= 0; index--) {
+      const year = directories[index]?.match(/^(\d{4})年?$/)?.[1];
+      const month = directories[index + 1]?.match(/^(\d{1,2})月?$/)?.[1];
+      const day = directories[index + 2]?.match(/^(\d{1,2})日?$/)?.[1];
+      if (!year || !month || !day) continue;
+      const normalized = normalizeDate(`${year}-${month}-${day}`);
+      if (normalized) return normalized;
+    }
+    return null;
+  }
+
+  private async scanVaultLegacyCandidates(folder: string): Promise<VaultLegacyCandidate[]> {
+    const rawFolder = folder.trim().replace(/^\/+|\/+$/g, "");
+    const selectedFolder = rawFolder ? safeFolder(rawFolder) : "";
+    const prefix = selectedFolder ? `${selectedFolder}/` : "";
+    const candidates: VaultLegacyCandidate[] = [];
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      if (prefix && !file.path.startsWith(prefix)) continue;
+      const content = await this.app.vault.cachedRead(file);
+      let frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+      if (!isFrontmatter(frontmatter)) {
+        const match = content.match(/^\uFEFF?---\s*\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+        if (!match?.[1]) continue;
+        if (!this.looksLikeLegacyProperties(match[1])) continue;
+        try {
+          const parsed: unknown = parseYaml(match[1]);
+          if (!isFrontmatter(parsed)) {
+            candidates.push({ file, content, reason: "Properties格式不合法" });
+            continue;
+          }
+          frontmatter = parsed;
+        } catch (error) {
+          candidates.push({ file, content, reason: errorMessageZh(error, "Properties解析失败") });
+          continue;
+        }
+      }
+      if (!this.looksLikeTransactionProperties(frontmatter)) continue;
+      const legacy = !this.isCurrentTransactionProperties(frontmatter);
+      if (!legacy) continue;
+      try {
+        candidates.push({ file, content, draft: this.legacyDraftFromProperties(frontmatter, file.path, file.basename) });
+      } catch (error) {
+        candidates.push({ file, content, reason: errorMessageZh(error, "无法读取旧版账目属性") });
+      }
+    }
+    return candidates;
+  }
+
+  private looksLikeLegacyProperties(yaml: string): boolean {
+    return /^(?:记账插件|类型|金额|时间|日期|内容|分类|账户|标签)\s*:/mu.test(yaml);
+  }
+
+  private looksLikeTransactionProperties(frontmatter: Frontmatter): boolean {
+    if ("记账插件" in frontmatter) return true;
+    const keys = ["类型", "金额", "时间", "日期", "内容", "分类", "账户", "标签"];
+    return keys.filter((key) => key in frontmatter).length >= 2 && ("金额" in frontmatter || "时间" in frontmatter || "日期" in frontmatter);
+  }
+
   private toDraft(item: Transaction): TransactionDraft {
     return {
       date: item.date,
@@ -640,7 +951,8 @@ export class TransactionStore {
       expression: item.expression || String(item.amount),
       note: item.note === "无" ? "" : item.note,
       tags: [...item.tags],
-      attachments: [...item.attachments]
+      attachments: [...item.attachments],
+      customValues: { ...item.customValues }
     };
   }
 
@@ -661,6 +973,23 @@ export class TransactionStore {
     const lines = ["行号,失败原因," + headers.map(escapeCsv).join(","), ...failures.map((failure) => [failure.row, failure.reason, ...failure.raw].map(escapeCsv).join(","))];
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     return this.app.vault.create(normalizePath(`${folder}/CSV导入失败-${stamp}.csv`), `\uFEFF${lines.join("\n")}`);
+  }
+
+  private async writeLegacyFailureFolder(failures: LegacyFailureSource[]): Promise<string> {
+    const root = safeFolder(this.getSettings().exportFolder);
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const folder = normalizePath(root ? `${root}/旧版转换失败-${stamp}` : `旧版转换失败-${stamp}`);
+    await this.ensureFolder(folder);
+    const reportRows: string[] = ["文件,原始路径,失败原因"];
+    for (const failure of failures) {
+      const baseName = sanitizeFileName(failure.name.replace(/\.md$/i, "")) || "转换失败文件";
+      const copyPath = this.uniqueFilePath(folder, baseName, "md");
+      await this.app.vault.create(copyPath, failure.content);
+      reportRows.push([copyPath.split("/").pop() ?? failure.name, failure.path, failure.reason].map(escapeCsv).join(","));
+    }
+    const reportPath = this.uniqueFilePath(folder, "失败说明", "csv");
+    await this.app.vault.create(reportPath, `\uFEFF${reportRows.join("\n")}`);
+    return folder;
   }
 
   private availableMarkdownPath(originalPath: string): string {

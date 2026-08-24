@@ -39,12 +39,6 @@
   min-width: 0;
 }
 
-.bookkeeping-subtitle {
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  margin-top: 4px;
-}
-
 .bookkeeping-header-actions,
 .bookkeeping-header-action-buttons,
 .bookkeeping-filters,
@@ -62,10 +56,6 @@
 .bookkeeping-header-action-buttons {
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-.bookkeeping-tag-select {
-  max-width: 150px;
 }
 
 .bookkeeping-month-input,
@@ -155,38 +145,6 @@
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.bookkeeping-active-filter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 0 0 14px;
-  padding: 8px 12px;
-  border: 1px solid color-mix(in srgb, var(--interactive-accent) 30%, var(--background-modifier-border));
-  border-radius: var(--radius-m);
-  color: var(--text-accent);
-  background: var(--bk-accent-soft);
-  font-size: var(--font-ui-small);
-}
-
-.bookkeeping-tag-reset {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 28px;
-  flex: 0 0 auto;
-  padding: 3px 9px;
-  color: var(--text-accent);
-  box-shadow: none;
-  background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary));
-  font-size: var(--font-smallest);
-}
-
-.bookkeeping-tag-reset svg {
-  width: 13px;
-  height: 13px;
 }
 
 .bookkeeping-main-grid {
@@ -311,7 +269,6 @@
   padding: 14px 15px;
 }
 
-.bookkeeping-bar-row,
 .bookkeeping-budget-row {
   margin-bottom: 12px;
 }
@@ -939,24 +896,6 @@
   content: "";
 }
 
-.bookkeeping-filter-tag-choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.bookkeeping-filter-tag-choices button {
-  height: 28px;
-  padding: 3px 9px;
-  color: var(--text-accent);
-  background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
-}
-
-.bookkeeping-filter-tag-choices button.is-selected {
-  color: var(--text-on-accent);
-  background: var(--interactive-accent);
-}
-
 .bookkeeping-cross-month-filter {
   display: inline-flex;
   align-items: center;
@@ -1126,12 +1065,6 @@ body.is-mobile .bookkeeping-view-container {
   padding-left: 0;
 }
 
-.bookkeeping-date-time {
-  color: var(--text-faint);
-  font-size: var(--font-smallest);
-  font-variant-numeric: tabular-nums;
-}
-
 .bookkeeping-table td {
   max-width: 240px;
   overflow: hidden;
@@ -1235,8 +1168,7 @@ body.is-mobile .bookkeeping-view-container {
   padding: 2px 7px;
 }
 
-.bookkeeping-inline-input,
-.bookkeeping-inline-select {
+.bookkeeping-inline-input {
   width: 100%;
   min-width: 0;
   height: 29px;
@@ -1368,15 +1300,33 @@ body.is-mobile .bookkeeping-view-container {
   background: transparent;
 }
 
-.bookkeeping-row-actions .bookkeeping-delete-icon {
-  color: #fff;
-  background: #d9363e;
+.bookkeeping-row-actions .bookkeeping-delete-icon,
+.bookkeeping-dashboard button.mod-warning,
+.bookkeeping-dashboard button.mod-destructive,
+.bookkeeping-modal button.mod-warning,
+.bookkeeping-modal button.mod-destructive,
+.bookkeeping-settings button.mod-warning,
+.bookkeeping-settings button.mod-destructive,
+.bookkeeping-danger-button,
+.bookkeeping-modal button[aria-label*="删除"] {
+  color: #fff !important;
+  border-color: #d9363e !important;
+  background: #d9363e !important;
+  box-shadow: none !important;
 }
 
-.bookkeeping-dashboard button.mod-warning,
-.bookkeeping-modal button.mod-warning {
-  color: #fff;
-  background: #d9363e;
+.bookkeeping-row-actions .bookkeeping-delete-icon:hover:not(:disabled),
+.bookkeeping-dashboard button.mod-warning:hover:not(:disabled),
+.bookkeeping-dashboard button.mod-destructive:hover:not(:disabled),
+.bookkeeping-modal button.mod-warning:hover:not(:disabled),
+.bookkeeping-modal button.mod-destructive:hover:not(:disabled),
+.bookkeeping-settings button.mod-warning:hover:not(:disabled),
+.bookkeeping-settings button.mod-destructive:hover:not(:disabled),
+.bookkeeping-danger-button:hover:not(:disabled),
+.bookkeeping-modal button[aria-label*="删除"]:hover:not(:disabled) {
+  color: #fff !important;
+  border-color: #be2f36 !important;
+  background: #be2f36 !important;
 }
 
 .bookkeeping-row-actions {
@@ -1756,15 +1706,6 @@ body.is-mobile .bookkeeping-view-container {
   color: var(--bk-expense);
 }
 
-.bookkeeping-period-categories h3,
-.bookkeeping-period-category-trend h3 {
-  margin: 15px 0 9px;
-}
-
-.bookkeeping-period-category {
-  margin-bottom: 8px;
-}
-
 .bookkeeping-undo-notice {
   display: flex;
   align-items: center;
@@ -1913,8 +1854,7 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
   background: var(--background-secondary);
 }
 
-.bookkeeping-chart-manager-row.is-dragging,
-.bookkeeping-draggable-setting.is-dragging {
+.bookkeeping-chart-manager-row.is-dragging {
   opacity: 0.5;
 }
 
@@ -1937,15 +1877,6 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
 .bookkeeping-setting-drag svg {
   width: 14px;
   height: 14px;
-}
-
-.bookkeeping-draggable-setting {
-  padding: 9px 6px;
-  border-radius: var(--radius-s);
-}
-
-.bookkeeping-draggable-setting:hover {
-  background: var(--background-modifier-hover);
 }
 
 .bookkeeping-form-error {
@@ -2123,11 +2054,6 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
 
   .bookkeeping-entry-modal .setting-item-control {
     min-width: 0;
-    max-width: none;
-  }
-
-  .bookkeeping-tag-select {
-    flex: 1;
     max-width: none;
   }
 
@@ -2339,8 +2265,7 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
     gap: 4px;
   }
 
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary,
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary {
     display: flex;
     width: 100%;
     min-width: 0;
@@ -2351,15 +2276,6 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
     flex-direction: row;
     justify-content: flex-end;
     flex-wrap: nowrap;
-  }
-
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
-    flex-direction: row-reverse;
-    justify-content: flex-end;
-  }
-
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary:empty {
-    display: none;
   }
 
   .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons > button,
@@ -2557,8 +2473,7 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
     gap: 4px;
   }
 
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary,
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary {
     gap: 4px;
   }
 
@@ -2807,13 +2722,6 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
   font-size: var(--font-ui-medium);
 }
 
-.bookkeeping-settings-subheading {
-  margin: 15px 0 2px;
-  color: var(--text-accent);
-  font-size: var(--font-ui-small);
-  letter-spacing: .03em;
-}
-
 .bookkeeping-settings .setting-item {
   min-height: 48px;
   align-items: center;
@@ -2892,6 +2800,59 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
   text-overflow: ellipsis;
 }
 
+.bookkeeping-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
+  color: var(--text-muted);
+}
+
+.bookkeeping-table-page-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+
+.bookkeeping-table-page-controls button {
+  width: auto;
+  min-width: 34px;
+  padding-inline: 9px;
+}
+
+.bookkeeping-table-page-controls button.is-current {
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+  background: var(--interactive-accent);
+  opacity: 1;
+}
+
+.bookkeeping-table-page-summary,
+.bookkeeping-table-page-count {
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .bookkeeping-table-pagination {
+    justify-content: center;
+  }
+
+  .bookkeeping-table-page-summary,
+  .bookkeeping-table-page-count {
+    width: 100%;
+    text-align: center;
+  }
+
+  .bookkeeping-table-page-controls button {
+    min-width: 30px;
+    padding-inline: 7px;
+  }
+}
+
 .bookkeeping-setting-order-list,
 .bookkeeping-column-config-list,
 .bookkeeping-preset-manager-list {
@@ -2919,6 +2880,38 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
 
 .bookkeeping-setting-order-name {
   font-weight: 500;
+}
+
+.bookkeeping-field-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bookkeeping-field-actions > .clickable-icon {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+}
+
+.bookkeeping-field-actions > .bookkeeping-field-delete {
+  color: white;
+  background: #d9363e;
+}
+
+.bookkeeping-field-actions > .bookkeeping-field-delete:hover {
+  color: white;
+  background: #be2f36;
+}
+
+.bookkeeping-field-delete svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
 }
 
 .bookkeeping-preset-grid {
@@ -3020,10 +3013,6 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
   text-align: left;
 }
 
-.bookkeeping-preset-row-spacer {
-  width: 28px;
-}
-
 .bookkeeping-preset-add-row {
   display: grid;
   grid-template-columns: 24px minmax(92px, 1fr) 64px 52px;
@@ -3076,7 +3065,7 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
 .bookkeeping-preset-add-row button,
 .bookkeeping-preset-finish-row button {
   width: auto;
-  min-width: 74px;
+  min-width: 0;
   padding-inline: 10px;
 }
 
@@ -3544,11 +3533,6 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
   display: none;
 }
 
-.bookkeeping-multi-filter-label {
-  color: var(--text-muted);
-  font-size: var(--font-smallest);
-}
-
 .bookkeeping-multi-filter-summary {
   overflow: hidden;
   text-align: right;
@@ -3810,13 +3794,13 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
 }
 
 @media (max-width: 520px) {
-  .bookkeeping-multi-filter-panel {
-    position: fixed;
+  .bookkeeping-dashboard.is-phone .bookkeeping-multi-filter-panel {
+    position: absolute;
     z-index: 1000;
-    top: auto;
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
+    top: calc(100% + 5px);
+    right: 0;
+    bottom: auto;
+    left: 0;
     max-height: 62vh;
   }
 
@@ -4379,6 +4363,33 @@ body.is-mobile .bookkeeping-select-column input,
   color: var(--interactive-accent);
 }
 
+.suggestion-item .bookkeeping-folder-suggestion-icon {
+  display: inline-flex;
+  margin-right: 8px;
+  color: var(--text-muted);
+  vertical-align: middle;
+}
+
+.suggestion-item .bookkeeping-folder-suggestion-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.bookkeeping-custom-field-modal textarea {
+  width: min(360px, 100%);
+  min-height: 112px;
+  resize: vertical;
+}
+
+.bookkeeping-custom-field-primary-setting {
+  align-items: center;
+}
+
+.bookkeeping-custom-field-primary-setting > .setting-item-info,
+.bookkeeping-custom-field-primary-setting > .setting-item-control {
+  align-self: center;
+}
+
 .bookkeeping-month-input {
   display: block;
   min-width: 132px;
@@ -4629,30 +4640,12 @@ body.is-mobile .bookkeeping-select-column input,
   }
 }
 
-.bookkeeping-account-editor-row .setting-item-control,
-.bookkeeping-structured-option .setting-item-control {
+.bookkeeping-account-editor-row .setting-item-control {
   flex-wrap: wrap;
 }
 
-.bookkeeping-account-editor-row input,
-.bookkeeping-structured-option input {
+.bookkeeping-account-editor-row input {
   width: 110px;
-}
-
-.bookkeeping-option-group-title {
-  margin: 18px 0 5px;
-  color: var(--text-muted);
-  font-size: var(--font-ui-medium);
-}
-
-.bookkeeping-structured-option {
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
-.bookkeeping-structured-option.is-new {
-  border-bottom: 1px solid var(--background-modifier-border);
-  background: color-mix(in srgb, var(--interactive-accent) 5%, transparent);
 }
 
 .bookkeeping-option-number {
@@ -4718,6 +4711,23 @@ body.is-mobile .bookkeeping-select-column input,
 }
 
 @media (max-width: 700px) {
+  body.is-mobile .bookkeeping-dashboard,
+  .bookkeeping-dashboard.is-mobile {
+    --input-radius: 5px;
+  }
+
+  body.is-mobile .bookkeeping-modal,
+  body.is-mobile .bookkeeping-settings,
+  .bookkeeping-modal.is-mobile,
+  .bookkeeping-settings.is-mobile {
+    --input-radius: 7px;
+  }
+
+  body.is-mobile .bookkeeping-entry-modal,
+  .bookkeeping-entry-modal.is-mobile {
+    --input-radius: 6px;
+  }
+
   body.is-mobile .bookkeeping-settings,
   .bookkeeping-settings.is-mobile {
     padding: 12px 12px calc(40px + env(safe-area-inset-bottom, 0px));
@@ -5279,17 +5289,12 @@ body.is-mobile .bookkeeping-select-column input,
     justify-items: stretch;
   }
 
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary,
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
+  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-primary {
     display: grid;
     width: 100%;
     grid-template-columns: repeat(auto-fit, 34px);
     justify-content: end;
     gap: 6px;
-  }
-
-  .bookkeeping-dashboard.is-phone .bookkeeping-header-action-row-secondary {
-    flex-direction: initial;
   }
 
   .bookkeeping-dashboard.is-phone .bookkeeping-header-action-buttons :is(button, .clickable-icon),
@@ -5382,7 +5387,7 @@ body.is-mobile .bookkeeping-select-column input,
     max-height: 34px;
     padding-block: 4px;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 10px;
+    border-radius: var(--input-radius);
     font-family: var(--font-interface);
     font-size: var(--font-ui-small);
     line-height: 1.2;
@@ -5394,7 +5399,7 @@ body.is-mobile .bookkeeping-select-column input,
     min-height: calc(var(--font-text-size) * 2.7 + 14px);
     padding-block: 7px;
     border: 1px solid var(--background-modifier-border);
-    border-radius: 10px;
+    border-radius: var(--input-radius);
     line-height: 1.35;
     box-shadow: none;
   }

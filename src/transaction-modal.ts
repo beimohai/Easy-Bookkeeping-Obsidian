@@ -1,5 +1,5 @@
 import { App, ButtonComponent, DropdownComponent, Modal, Notice, Setting, TFile, TextComponent, setIcon } from "obsidian";
-import type { BookkeepingSettings, Transaction, TransactionDraft, TransactionType } from "./types";
+import { customFieldDefaultValue, customFieldId, isCustomFieldKey, type BookkeepingSettings, type Transaction, type TransactionDraft, type TransactionType } from "./types";
 import { currentTime, errorMessageZh, evaluateAmount, formatMoney, normalizeDate, parseNoteTags, today, uniqueStrings } from "./utils";
 import type { TransactionStore } from "./transaction-store";
 import { translate } from "./locales";
@@ -51,8 +51,33 @@ export class TransactionModal extends Modal {
     let amountInput: TextComponent | null = null;
     let noteInput: HTMLTextAreaElement | null = null;
     let tagInput: TextComponent | null = null;
+    const customClearers: Array<() => void> = [];
     for (const field of this.settings.optionFieldOrder) {
-      if (field === "date") {
+      if (isCustomFieldKey(field)) {
+        const config = this.settings.customFields.find((item) => item.id === customFieldId(field));
+        if (!config?.enabled) continue;
+        const setting = new Setting(content).setName(config.name);
+        if (config.kind === "select") {
+          setting.addDropdown((dropdown) => {
+            const fallback = customFieldDefaultValue(config);
+            const current = this.draft.customValues[config.id] || fallback;
+            this.draft.customValues[config.id] = current;
+            dropdown.addOptions(Object.fromEntries([...new Set([current, ...config.options].filter(Boolean))].map((option) => [option, option])));
+            dropdown.setValue(current);
+            dropdown.onChange((value) => this.draft.customValues[config.id] = value);
+            customClearers.push(() => {
+              this.draft.customValues[config.id] = fallback;
+              dropdown.setValue(fallback);
+            });
+          });
+        } else {
+          setting.addText((text) => {
+            text.setPlaceholder("可以留空").setValue(this.draft.customValues[config.id] ?? "");
+            text.onChange((value) => this.draft.customValues[config.id] = value.trim());
+            customClearers.push(() => text.setValue(""));
+          });
+        }
+      } else if (field === "date") {
         const dateSetting = new Setting(content).setName("日期");
         dateSetting.settingEl.addClass("bookkeeping-datetime-setting");
         const dateIcon = dateSetting.controlEl.createSpan({ cls: "bookkeeping-datetime-icon", attr: { "aria-hidden": "true" } });
@@ -163,11 +188,13 @@ export class TransactionModal extends Modal {
             this.draft.note = "";
             this.draft.tags = [];
             this.draft.attachments = [];
+            this.draft.customValues = {};
             this.pendingAttachments = [];
             titleInput?.setValue("");
             amountInput?.setValue("");
             if (noteInput) noteInput.value = "";
             tagInput?.setValue("");
+            customClearers.forEach((clear) => clear());
             titleInput?.inputEl.focus();
           } else {
             this.close();
@@ -350,7 +377,9 @@ export class TransactionModal extends Modal {
       expression: "",
       note: "",
       tags: [],
-      attachments: []
+      attachments: [],
+      customValues: Object.fromEntries(this.settings.customFields.map((field) => [field.id, customFieldDefaultValue(field)])),
+      customProperties: Object.fromEntries(this.settings.customFields.filter((field) => field.enabled).map((field) => [field.id, field.property]))
     };
   }
 
@@ -368,7 +397,9 @@ export class TransactionModal extends Modal {
       expression: transaction.expression || String(transaction.amount),
       note: transaction.note,
       tags: [...transaction.tags],
-      attachments: [...transaction.attachments]
+      attachments: [...transaction.attachments],
+      customValues: { ...transaction.customValues },
+      customProperties: Object.fromEntries(this.settings.customFields.filter((field) => field.enabled).map((field) => [field.id, field.property]))
     };
   }
 }

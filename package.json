@@ -1,6 +1,6 @@
 {
   "name": "easy-bookkeeping",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "A local-first bookkeeping plugin with fast entry, filters, export, and configurable dashboards",
   "main": "main.js",
   "type": "module",

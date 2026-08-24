@@ -6,4 +6,3 @@ src/**/.DS_Store export-ignore
 .agents export-ignore
 *.log export-ignore
 *.map export-ignore
-支持.png export-ignore

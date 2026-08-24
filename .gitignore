@@ -1,5 +1,7 @@
 node_modules/
+.codex/
 .DS_Store
+data.json
 *.log
 *.zip
 *.map

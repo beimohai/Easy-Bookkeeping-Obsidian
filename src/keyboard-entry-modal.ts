@@ -1,6 +1,6 @@
 import { App, Modal, Notice } from "obsidian";
-import type { BookkeepingSettings, EntryField, TransactionDraft } from "./types";
-import { ENTRY_FIELD_LABELS } from "./types";
+import type { BookkeepingSettings, CustomFieldConfig, EntryField, TransactionDraft } from "./types";
+import { ENTRY_FIELD_LABELS, customFieldDefaultValue, customFieldId, isCustomFieldKey } from "./types";
 import type { TransactionStore } from "./transaction-store";
 import { currentMonth, currentTime, errorMessageZh, evaluateAmount, formatMoney, formatMonthDisplay, parseNoteTags, today } from "./utils";
 import { translate } from "./locales";
@@ -120,9 +120,14 @@ export class KeyboardEntryModal extends Modal {
         this.lastDay = String(day).padStart(2, "0");
         this.draft.date = `${this.month}-${this.lastDay}`;
       } else if (choices.length) {
+        if (isCustomFieldKey(currentStep) && !value) {
+          const field = this.customField(currentStep);
+          this.draft.customValues[customFieldId(currentStep)] = field ? customFieldDefaultValue(field) : "";
+        } else {
         const selected = this.resolveChoice(value, choices, this.optionCodes(currentStep, choices));
         if (!selected) throw new Error(this.optionError(currentStep));
         this.applyOption(currentStep, selected);
+        }
       } else if (currentStep === "title") {
         if (!value) throw new Error("内容不得为空");
         if (!this.settings.allowNumericTitle && /^\d+$/.test(value)) throw new Error("内容不能为纯数字");
@@ -144,6 +149,8 @@ export class KeyboardEntryModal extends Modal {
         const parsed = parseNoteTags(value);
         this.draft.note = parsed.note;
         this.draft.tags = parsed.tags;
+      } else if (isCustomFieldKey(currentStep)) {
+        this.draft.customValues[customFieldId(currentStep)] = value;
       }
 
       const rebuilt = this.steps();
@@ -162,6 +169,10 @@ export class KeyboardEntryModal extends Modal {
   private steps(): KeyboardStep[] {
     const result: KeyboardStep[] = [];
     for (const field of this.settings.optionFieldOrder) {
+      if (isCustomFieldKey(field)) {
+        if (this.customField(field)?.enabled) result.push(field);
+        continue;
+      }
       if (field === "date" || field === "title" || field === "amount") result.push(field);
       else if (field === "note" && this.settings.enableNote) result.push(field);
       if (field === "account" && this.settings.enableAccount) result.push(field);
@@ -175,6 +186,10 @@ export class KeyboardEntryModal extends Modal {
   }
 
   private optionValues(step: KeyboardStep): string[] {
+    if (isCustomFieldKey(step)) {
+      const field = this.customField(step);
+      return field?.kind === "select" ? field.options : [];
+    }
     if (step === "account" || step === "targetAccount") return this.settings.accounts.map((account) => account.name);
     if (step === "type") return this.settings.typeOrder.filter((type) => this.settings.enableAccount || type !== "转账").map((type) => this.settings.typeLabels[type] ?? type);
     if (step === "necessity") return this.settings.necessityOrder.map((value) => this.settings.necessityLabels[value] ?? value);
@@ -183,6 +198,10 @@ export class KeyboardEntryModal extends Modal {
   }
 
   private optionCodes(step: KeyboardStep, choices: string[]): string[] {
+    if (isCustomFieldKey(step)) {
+      const field = this.customField(step);
+      return choices.map((choice, index) => field?.optionCodes[choice] || String(index + 1));
+    }
     if (step === "account" || step === "targetAccount") {
       return choices.map((choice, index) => this.settings.accounts.find((account) => account.name === choice)?.code || String(index + 1));
     }
@@ -202,7 +221,8 @@ export class KeyboardEntryModal extends Modal {
   }
 
   private applyOption(step: KeyboardStep, value: string): void {
-    if (step === "account") this.draft.account = value;
+    if (isCustomFieldKey(step)) this.draft.customValues[customFieldId(step)] = value;
+    else if (step === "account") this.draft.account = value;
     else if (step === "targetAccount") {
       if (value === this.draft.account) throw new Error("转入账户不能与转出账户相同");
       this.draft.targetAccount = value;
@@ -224,8 +244,11 @@ export class KeyboardEntryModal extends Modal {
 
   private initialInputValue(step: KeyboardStep, choices: string[]): string {
     if (step === "date") return this.lastDay;
+    if (isCustomFieldKey(step) && !choices.length) return this.draft.customValues[customFieldId(step)] ?? "";
+    if (isCustomFieldKey(step) && !(this.draft.customValues[customFieldId(step)] ?? "")) return "";
     if (!choices.length) return "";
-    const current = step === "account" ? this.draft.account
+    const current = isCustomFieldKey(step) ? (this.draft.customValues[customFieldId(step)] ?? "")
+      : step === "account" ? this.draft.account
       : step === "targetAccount" ? this.draft.targetAccount
       : step === "type" ? (this.settings.typeLabels[this.draft.type] ?? this.draft.type)
       : step === "necessity" ? (this.settings.necessityLabels[this.draft.necessity] ?? this.draft.necessity)
@@ -247,6 +270,7 @@ export class KeyboardEntryModal extends Modal {
     if (step === "title") return this.settings.allowNumericTitle ? "请输入账目内容" : "请输入账目内容（不能为纯数字）";
     if (step === "amount") return "请输入金额或算式";
     if (step === "attachments") return `按 ${this.displayKey(this.settings.keyboardShortcuts.confirm)} 继续`;
+    if (isCustomFieldKey(step)) return this.customField(step)?.kind === "select" ? `请输入${this.customField(step)?.name ?? "选项"}编号或完整名称` : "可以留空，直接确认继续";
     return "请输入备注，可以留空";
   }
 
@@ -263,7 +287,12 @@ export class KeyboardEntryModal extends Modal {
     if (step === "amount") return "输入金额";
     if (step === "note") return "输入备注";
     if (step === "attachments") return "添加附件";
+    if (isCustomFieldKey(step)) return `${this.customField(step)?.kind === "select" ? "选择" : "输入"}${this.customField(step)?.name ?? "自定义字段"}`;
     return `选择${ENTRY_FIELD_LABELS[step]}`;
+  }
+
+  private customField(step: EntryField): CustomFieldConfig | undefined {
+    return isCustomFieldKey(step) ? this.settings.customFields.find((field) => field.id === customFieldId(step)) : undefined;
   }
 
   private renderOptionHighlight(): void {
@@ -375,7 +404,9 @@ export class KeyboardEntryModal extends Modal {
       expression: "",
       note: "",
       tags: [],
-      attachments: []
+      attachments: [],
+      customValues: Object.fromEntries(this.settings.customFields.map((field) => [field.id, customFieldDefaultValue(field)])),
+      customProperties: Object.fromEntries(this.settings.customFields.filter((field) => field.enabled).map((field) => [field.id, field.property]))
     };
   }
 

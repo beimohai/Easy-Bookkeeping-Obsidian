@@ -21,13 +21,18 @@ Easy Bookkeeping is a minimalist local bookkeeping plugin for [Obsidian](https:/
 
 It does not depend on third-party services. All data is stored locally as Markdown files, and the project is completely open source and highly customizable.
 
-Author on Bilibili: [Beimohai](https://space.bilibili.com/1065768987)  
-Introduction video:  
+Author on Bilibili: [北漠海](https://space.bilibili.com/1065768987)
+Introduction video: [bilibili](https://www.bilibili.com/video/BV1po8q69E6j/)
 Change log: [ChangeLog.md](ChangeLog.md)
 
 The plugin has not yet undergone long-term use by the author or exhaustive testing. If you encounter a bug, contact the author on Bilibili or join QQ group 588526922. I may not review [Issues](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/issues) and [Pull requests](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/pulls) promptly.
 
 ## Quick start
+
+### Install from the Obsidian community plugin catalog
+
+1. Search for **Easy Bookkeeping** under **Settings → Community plugins → Browse**, or [open the plugin page directly](obsidian://show-plugin?id=easy-bookkeeping);
+2. Select **Install**, then **Enable**.
 
 ### Install from GitHub Releases
 
@@ -35,6 +40,8 @@ The plugin has not yet undergone long-term use by the author or exhaustive testi
 2. Extract it and move the folder into `.obsidian/plugins/` inside your Obsidian vault. You may need to enable the display of hidden folders;
 3. Place the three plugin files in that directory;
 4. Restart Obsidian and enable **Easy Bookkeeping** under **Settings → Community plugins**.
+
+For a manual update, replace only `main.js`, `manifest.json`, and `styles.css`. Keep the existing `data.json`, or your plugin settings will be lost.
 
 ### Install from a cloud drive
 
@@ -62,6 +69,7 @@ The production build generates `main.js` in the project root.
    - The mobile mode provides a complete touch-friendly form. The plugin can detect the device automatically or use a manually selected desktop or mobile mode;
    - Continuous entry can be enabled independently on desktop and mobile. Transactions created from the dashboard automatically use the currently displayed month;
    - Date, description, amount, notes, account, type, necessity, category, and attachments follow the configured entry order. Notes can be disabled, while date, description, and amount are always kept;
+   - Add text or select entry fields to forms, keyboard entry, and transaction details. Select presets support defaults, unique codes, drag sorting, and restoration to their creation-time snapshot;
    - Amounts accept plain numbers and arithmetic expressions such as `11.4+5.1-4`. A transaction is not created when an input contains invalid characters or more than two decimal places;
    - Desktop entry shortcuts, same-day duplicate-description validation, numeric-only description validation, empty-amount validation, and attachment drag-and-drop are configurable. Global shortcuts are configured through Obsidian's built-in hotkey settings.
 
@@ -78,23 +86,24 @@ The production build generates `main.js` in the project root.
    - Pie charts support expense categories, income categories, necessity, account expenses, account income, and account balances, with both amounts and percentages;
    - Tag summaries support income, expenses, net balance, and transaction count, sorted by amount or tag name in ascending or descending order;
    - Budget progress and account balances are independent charts with dedicated editors for budgets and monthly opening balances;
-   - Charts can be added, removed, hidden, duplicated, reordered by dragging, and switched between half and full width. Summary cards and charts use the same filtered results.
+   - Charts can be added, removed, hidden, duplicated, reordered by dragging, and switched between half and full width. Summary cards, pie charts, and tag summaries use the complete filtered transaction-detail result.
 
 4. **Multidimensional transaction details**
    - Customize column names, order, visibility, inline-edit permissions, and widths. Columns can be resized by dragging or restored to their default widths;
    - Permanently visible horizontal scrollbars above and below the table stay synchronized, while the selection column remains fixed on the left;
    - Date order can be locked as the primary sort. Transactions on the same date can then be sorted by time, description, type, necessity, category, account, or amount;
    - When inline editing is enabled, configured columns can directly edit dates, descriptions, preset fields, amount formulas, notes, and tags. Invalid input produces a localized message;
-   - Selected transactions can be updated in bulk for date, type, necessity, account, category, and tags, or deleted together;
+   - Selected transactions can be updated in bulk for date, type, necessity, account, category, enabled custom select fields, and tags, or deleted together;
+   - Any result set over 100 transactions uses fixed pages. Select all covers the complete filtered result rather than only the current page;
    - Long descriptions, notes, tags, and preset values are automatically truncated according to the available width.
 
 5. **Linked filters and search**
-   - Type, necessity, category, account, and tag filters support multiple selection, select all, keyword search, and linked values based on the current result;
-   - Search descriptions, notes, and tags, and set minimum and maximum amounts or start and end dates;
+   - Type, necessity, category, account, tag, and custom select fields support multiple selection, select all, keyword search, and linked values based on the current result;
+   - Search descriptions, notes, tags, and every custom field, and set minimum and maximum amounts or start and end dates. Search waits until IME composition is complete;
    - Amount ranges accept only non-negative values with at most two decimal places, and both amount and date ranges validate their lower and upper bounds;
-   - Cross-month filtering applies to every filter condition and can search transactions across all months with combined criteria;
-   - Transaction details, income, expenses, net balance, transaction count, and all charts use the same filtered result;
-   - Selecting an account balance, tag summary, or transaction tag applies the matching filter without changing the current page position.
+   - Cross-month filtering applies to every filter condition and turns on automatically when the date range extends outside the displayed month;
+   - Transaction details, income, expenses, net balance, transaction count, pie charts, and tag summaries use the same filtered result;
+   - Selecting an account balance, tag summary, or transaction tag applies the matching filter without changing the current page position or forcing a collapsed filter panel open.
 
 6. **Accounts, budgets, tags, and attachments**
    - Support multiple accounts, custom account codes and order, transfers, editable monthly opening balances, and automatic carry-over;
@@ -106,6 +115,7 @@ The production build generates `main.js` in the project root.
 
 7. **Data import, export, and migration**
    - CSV import detects field and preset differences and requests confirmation before converting data to the current settings;
+   - CSV can carry the complete entry-field configuration. Import can keep the current setup or enable the attached setup after a second confirmation and old-property cleanup;
    - CSV import and legacy conversion show percentage progress and report failed items with specific reasons;
    - CSV export supports all transactions, the current month, current filtered results, or a custom date range, with configurable filenames and destinations;
    - On desktop, use the operating-system save dialog to export outside the Obsidian vault;
@@ -117,6 +127,7 @@ The production build generates `main.js` in the project root.
    - Even when account or category entry is disabled, Markdown still stores a default account and `未分类`;
    - Expressions can optionally be written to notes. When this is disabled, newly saved transactions no longer keep a dedicated expression property, and existing files can be converted after the setting changes;
    - Deletion supports a confirmation dialog and a configurable undo period from 0 to 15 seconds;
+   - When deleting a custom entry field, choose whether to preserve its historical Markdown property or remove that property from all existing transactions;
    - File changes refresh automatically, and the dashboard can also be rescanned manually;
    - After publication in the community plugin catalog, updates are handled by Obsidian. Manual installations can be updated by downloading the new files again from GitHub Releases or the cloud-drive mirror.
 
@@ -135,7 +146,6 @@ Each transaction is stored as an independent Markdown file, for example:
 ```yaml
 ---
 记账插件: true
-账目ID: mabc1234-abcdefgh
 时间: 2026-07-21 11:45
 类型: 支出
 标签: 必需
@@ -144,8 +154,6 @@ Each transaction is stored as an independent Markdown file, for example:
 内容: 午餐
 金额: 19.19
 备注: 无
-tags:
-  - 记账
 附件: []
 ---
 ```

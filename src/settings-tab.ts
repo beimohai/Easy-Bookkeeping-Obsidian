@@ -1,14 +1,15 @@
-import { App, ButtonComponent, Modal, Platform, PluginSettingTab, Setting, TFolder, normalizePath, setIcon } from "obsidian";
+import { App, ButtonComponent, Modal, Platform, PluginSettingTab, Setting, setIcon } from "obsidian";
 import type { SettingDefinitionItem } from "obsidian";
 import type BookkeepingPlugin from "./main";
-import type { EntryField, Language, Necessity, TableColumn, TransactionType, TypeEffect } from "./types";
-import { DEFAULT_SETTINGS, ENTRY_FIELD_LABELS, TABLE_COLUMN_LABELS } from "./types";
+import type { CustomFieldConfig, CustomFieldKind, EntryField, Language, Necessity, TableColumn, TransactionType, TypeEffect } from "./types";
+import { DEFAULT_SETTINGS, ENTRY_FIELD_LABELS, TABLE_COLUMN_LABELS, customFieldId, customFieldKey, isCustomFieldKey, isReservedTransactionProperty } from "./types";
 import qqGroupUrl from "./assets/community/qq-group.jpg";
 import sponsorQrUrl from "./assets/community/support.png";
 import { BILIBILI_URL, ISSUES_URL, PROJECT_URL, RELEASES_URL } from "./branding";
 import { LANGUAGE_OPTIONS } from "./locales";
 import { formatDateDisplay, formatMonthDisplay } from "./utils";
 import { bindPointerSort } from "./pointer-sort";
+import { VaultFolderSuggest } from "./vault-folder-suggest";
 
 declare const __PLUGIN_VERSION__: string;
 
@@ -127,6 +128,10 @@ export class BookkeepingSettingTab extends PluginSettingTab {
       })(); }));
 
     this.heading("录入字段与顺序");
+    new Setting(containerEl)
+      .setName("新增录入字段")
+      .setDesc("内容型可以自由输入；分类型从预设中选择。")
+      .addButton((button) => button.setButtonText("新增字段").setIcon("plus").setCta().onClick(() => new CustomFieldModal(this.app, this.plugin, null, () => this.update()).open()));
     const fieldList = containerEl.createDiv({ cls: "bookkeeping-setting-order-list" });
     this.renderEntryFields(fieldList);
 
@@ -136,6 +141,9 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     this.presetCard(presetGrid, "necessity", "必要性", "badge-check");
     this.presetCard(presetGrid, "category", "分类", "shapes");
     this.presetCard(presetGrid, "account", "账户", "landmark");
+    for (const field of this.plugin.settings.customFields.filter((item) => item.kind === "select")) {
+      this.customPresetCard(presetGrid, field);
+    }
 
     this.section("账目明细");
     this.heading("明细行为");
@@ -318,7 +326,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     details.createEl("a", { text: "Easy Bookkeeping", attr: { href: PROJECT_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: "作者：北漠海", attr: { href: BILIBILI_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: `版本号：${__PLUGIN_VERSION__}`, attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
-    details.createEl("a", { text: "更新日期：2026-08-18", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
+    details.createEl("a", { text: "更新日期：2026-08-24", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
     footer.createDiv({ text: "本项目基于 MIT License 开源", cls: "bookkeeping-plugin-footer-license" });
   }
 
@@ -334,33 +342,52 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     button.addEventListener("click", () => new PresetManagerModal(this.app, this.plugin, group).open());
   }
 
+  private customPresetCard(parent: HTMLElement, field: CustomFieldConfig): void {
+    const button = parent.createEl("button", { cls: "bookkeeping-preset-card", attr: { type: "button" } });
+    const icon = button.createSpan(); setIcon(icon, "list-tree");
+    button.createSpan({ text: field.name });
+    const arrow = button.createSpan(); setIcon(arrow, "chevron-right");
+    button.addEventListener("click", () => new CustomSelectPresetModal(this.app, this.plugin, field.id).open());
+  }
+
   private renderEntryFields(parent: HTMLElement): void {
     parent.empty();
     for (const field of this.plugin.settings.optionFieldOrder) {
       const row = parent.createDiv({ cls: "bookkeeping-setting-order-row" });
       row.dataset.optionField = field;
+      const custom = isCustomFieldKey(field)
+        ? this.plugin.settings.customFields.find((item) => item.id === customFieldId(field))
+        : undefined;
+      if (isCustomFieldKey(field) && !custom) {
+        row.remove();
+        continue;
+      }
+      const label = custom?.name ?? ENTRY_FIELD_LABELS[field as keyof typeof ENTRY_FIELD_LABELS] ?? "自定义字段";
       const grip = row.createSpan({ cls: "bookkeeping-setting-drag", attr: { title: "拖动排序" } });
       setIcon(grip, "grip-vertical"); grip.draggable = true;
-      row.createSpan({ text: ENTRY_FIELD_LABELS[field], cls: "bookkeeping-setting-order-name" });
-      const isEnabled = (): boolean => field === "account" ? this.plugin.settings.enableAccount
+      row.createSpan({ text: label, cls: "bookkeeping-setting-order-name" });
+      const fieldActions = row.createDiv({ cls: "bookkeeping-field-actions" });
+      const isEnabled = (): boolean => custom ? custom.enabled
+        : field === "account" ? this.plugin.settings.enableAccount
         : field === "category" ? this.plugin.settings.enableCategory
         : field === "type" ? this.plugin.settings.enableType
         : field === "necessity" ? this.plugin.settings.enableNecessity
         : field === "attachments" ? this.plugin.settings.enableEntryAttachments
         : field === "note" ? this.plugin.settings.enableNote
         : true;
-      const canToggle = field === "account" || field === "category" || field === "type" || field === "necessity" || field === "attachments" || field === "note";
+      const canToggle = Boolean(custom) || field === "account" || field === "category" || field === "type" || field === "necessity" || field === "attachments" || field === "note";
       if (canToggle) {
-        const eye = row.createEl("button", { cls: "clickable-icon bookkeeping-field-eye", attr: { type: "button", "aria-label": `${isEnabled() ? "关闭" : "启用"}${ENTRY_FIELD_LABELS[field]}` } });
+        const eye = fieldActions.createEl("button", { cls: "clickable-icon bookkeeping-field-eye", attr: { type: "button", "aria-label": `${isEnabled() ? "关闭" : "启用"}${label}` } });
         const renderEye = (): void => {
           setIcon(eye, isEnabled() ? "eye" : "eye-off");
-          eye.setAttribute("aria-label", `${isEnabled() ? "关闭" : "启用"}${ENTRY_FIELD_LABELS[field]}`);
+          eye.setAttribute("aria-label", `${isEnabled() ? "关闭" : "启用"}${label}`);
           eye.toggleClass("is-active", isEnabled());
         };
         renderEye();
         eye.addEventListener("click", () => { void (async () => {
           const next = !isEnabled();
-          if (field === "account") this.plugin.settings.enableAccount = next;
+          if (custom) custom.enabled = next;
+          else if (field === "account") this.plugin.settings.enableAccount = next;
           else if (field === "category") this.plugin.settings.enableCategory = next;
           else if (field === "type") this.plugin.settings.enableType = next;
           else if (field === "necessity") this.plugin.settings.enableNecessity = next;
@@ -369,7 +396,15 @@ export class BookkeepingSettingTab extends PluginSettingTab {
           renderEye();
           await this.plugin.saveSettingsQuietly();
         })(); });
-      } else row.createSpan({ cls: "bookkeeping-field-required" });
+      } else fieldActions.createSpan({ cls: "bookkeeping-field-required" });
+      if (custom) {
+        const edit = fieldActions.createEl("button", { cls: "clickable-icon", attr: { type: "button", "aria-label": `编辑${label}` } });
+        setIcon(edit, "pencil");
+        edit.addEventListener("click", () => new CustomFieldModal(this.app, this.plugin, custom, () => this.update()).open());
+        const remove = fieldActions.createEl("button", { cls: "clickable-icon mod-warning bookkeeping-field-delete", attr: { type: "button", "aria-label": `删除${label}` } });
+        setIcon(remove, "trash-2");
+        remove.addEventListener("click", () => new DeleteCustomFieldModal(this.app, custom, (clearHistory) => void this.deleteCustomField(custom, clearHistory)).open());
+      }
       grip.addEventListener("dragstart", () => { this.draggedOption = field; row.addClass("is-dragging"); });
       grip.addEventListener("dragend", () => { this.draggedOption = null; row.removeClass("is-dragging"); });
       row.addEventListener("dragover", (event) => event.preventDefault());
@@ -395,6 +430,24 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     }
   }
 
+  private async deleteCustomField(custom: CustomFieldConfig, clearHistory: boolean): Promise<void> {
+    let cleared = 0;
+    if (clearHistory) cleared = await this.plugin.store.clearCustomFieldProperties([custom.property]);
+    const key = customFieldKey(custom.id);
+    this.plugin.settings.customFields = this.plugin.settings.customFields.filter((item) => item.id !== custom.id);
+    this.plugin.settings.optionFieldOrder = this.plugin.settings.optionFieldOrder.filter((item) => item !== key);
+    this.plugin.settings.tableColumnOrder = this.plugin.settings.tableColumnOrder.filter((item) => item !== key);
+    this.plugin.settings.visibleTableColumns = this.plugin.settings.visibleTableColumns.filter((item) => item !== key);
+    this.plugin.settings.editableColumns = this.plugin.settings.editableColumns.filter((item) => item !== key);
+    delete this.plugin.settings.tableColumnLabels[key];
+    delete this.plugin.settings.tableColumnWidths[key];
+    delete this.plugin.settings.savedDashboardFilters.customFields[custom.id];
+    for (const filters of Object.values(this.plugin.settings.savedMonthlyDashboardFilters)) delete filters.customFields[custom.id];
+    await this.plugin.saveSettingsQuietly();
+    this.plugin.notice(clearHistory ? `已删除“${custom.name}”，并从${cleared}笔原有账目中清除该属性` : `已删除“${custom.name}”，原有Markdown属性已保留`);
+    this.update();
+  }
+
   private renderColumnRows(parent: HTMLElement): void {
     parent.empty();
     for (const column of this.plugin.settings.tableColumnOrder) {
@@ -403,9 +456,12 @@ export class BookkeepingSettingTab extends PluginSettingTab {
       const left = row.createDiv({ cls: "bookkeeping-column-config-name" });
       const grip = left.createSpan({ cls: "bookkeeping-setting-drag", attr: { title: "拖动排序" } });
       setIcon(grip, "grip-vertical"); grip.draggable = true;
-      const input = left.createEl("input", { type: "text", value: this.plugin.settings.tableColumnLabels[column] || TABLE_COLUMN_LABELS[column], attr: { "aria-label": `修改${TABLE_COLUMN_LABELS[column]}表头名称` } });
+      const defaultLabel = isCustomFieldKey(column)
+        ? (this.plugin.settings.customFields.find((field) => field.id === customFieldId(column))?.name ?? "自定义字段")
+        : TABLE_COLUMN_LABELS[column];
+      const input = left.createEl("input", { type: "text", value: this.plugin.settings.tableColumnLabels[column] || defaultLabel, attr: { "aria-label": `修改${defaultLabel}表头名称` } });
       input.addEventListener("change", () => { void (async () => {
-        this.plugin.settings.tableColumnLabels[column] = input.value.trim() || TABLE_COLUMN_LABELS[column];
+        this.plugin.settings.tableColumnLabels[column] = input.value.trim() || defaultLabel;
         input.value = this.plugin.settings.tableColumnLabels[column];
         await this.plugin.saveSettingsQuietly();
       })(); });
@@ -464,18 +520,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
   }
 
   private attachVaultFolderSuggestions(input: HTMLInputElement): void {
-    const folders = this.app.vault.getAllLoadedFiles().filter((file): file is TFolder => file instanceof TFolder && Boolean(file.path)).map((folder) => folder.path).sort();
-    const datalist = this.containerEl.createEl("datalist", { attr: { id: `bookkeeping-setting-folders-${Date.now()}-${Math.random().toString(36).slice(2)}` } });
-    folders.forEach((path) => datalist.createEl("option", { value: path }));
-    input.setAttribute("list", datalist.id);
-    input.addEventListener("change", () => {
-      const raw = normalizePath(input.value.trim());
-      const exact = folders.find((path) => path.toLocaleLowerCase() === raw.toLocaleLowerCase());
-      const matches = folders.filter((path) => path.split("/").pop()?.toLocaleLowerCase() === raw.toLocaleLowerCase());
-      const matchedFolder = matches.length === 1 ? matches[0] : undefined;
-      input.value = exact ?? matchedFolder ?? raw;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    });
+    new VaultFolderSuggest(this.app, input);
   }
 
   private shortcutSetting(name: string, key: keyof typeof this.plugin.settings.keyboardShortcuts): void {
@@ -569,6 +614,122 @@ export class BookkeepingSettingTab extends PluginSettingTab {
   }
 }
 
+class CustomFieldModal extends Modal {
+  private name: string;
+  private kind: CustomFieldKind;
+  private optionsText: string;
+
+  constructor(
+    app: App,
+    private readonly plugin: BookkeepingPlugin,
+    private readonly existing: CustomFieldConfig | null,
+    private readonly onSaved: () => void
+  ) {
+    super(app);
+    this.name = existing?.name ?? "";
+    this.kind = existing?.kind ?? "text";
+    const orderedOptions = existing?.kind === "select" && existing.defaultValue
+      ? [existing.defaultValue, ...existing.options.filter((option) => option !== existing.defaultValue)]
+      : (existing?.options ?? []);
+    this.optionsText = orderedOptions.join("\n");
+  }
+
+  onOpen(): void {
+    this.modalEl.addClass("bookkeeping-modal", "bookkeeping-custom-field-modal");
+    this.setTitle(this.existing ? "编辑录入字段" : "新增录入字段");
+    const nameSetting = new Setting(this.contentEl).setName("字段名称")
+      .addText((text) => text.setValue(this.name).onChange((value) => this.name = value.trim()));
+    nameSetting.settingEl.addClass("bookkeeping-custom-field-primary-setting");
+    const typeSetting = new Setting(this.contentEl).setName("字段类型").addDropdown((dropdown) => dropdown
+      .addOptions({ text: "内容型", select: "分类型" })
+      .setValue(this.kind)
+      .onChange((value) => {
+        this.kind = value === "select" ? "select" : "text";
+        optionsSetting.settingEl.toggleClass("bookkeeping-hidden", this.kind !== "select");
+      }));
+    typeSetting.settingEl.addClass("bookkeeping-custom-field-primary-setting");
+    const optionsSetting = new Setting(this.contentEl).setName("预设选项").setDesc("每行只能填写一个选项，第一行为默认录入值。")
+      .addTextArea((text) => {
+        text.inputEl.rows = 6;
+        text.setValue(this.optionsText).onChange((value) => this.optionsText = value);
+      });
+    optionsSetting.settingEl.toggleClass("bookkeeping-hidden", this.kind !== "select");
+    const desc = this.contentEl.createEl("p", { cls: "setting-item-description", text: "内容型可以自由输入；分类型从预设中选择。" });
+    desc.setAttribute("role", "note");
+    const error = this.contentEl.createDiv({ cls: "bookkeeping-form-error" });
+    const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
+    new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
+    new ButtonComponent(actions).setButtonText(this.existing ? "保存修改" : "新增字段").setCta().onClick(() => { void (async () => {
+      error.empty();
+      const name = this.name.trim();
+      const options = [...new Set(this.optionsText.split(/\r?\n/).map((option) => option.trim()).filter(Boolean))];
+      const duplicate = this.plugin.settings.customFields.some((field) => field !== this.existing && (field.name.toLocaleLowerCase() === name.toLocaleLowerCase() || field.property.toLocaleLowerCase() === name.toLocaleLowerCase()));
+      if (!name) return void error.setText("字段名称不能为空");
+      if (duplicate) return void error.setText("字段名称不能与其他自定义字段重复");
+      if (isReservedTransactionProperty(name) && (!this.existing || name !== this.existing.name)) return void error.setText("字段名称不能与内置Markdown属性重复");
+      if (this.kind === "select" && !options.length) return void error.setText("分类型字段至少需要一个预设选项");
+      if (this.existing) {
+        const oldName = this.existing.name;
+        const wasSelect = this.existing.kind === "select";
+        const usedCodes = new Set<string>();
+        const nextCodes: Record<string, string> = {};
+        options.forEach((option, index) => {
+          let code = this.existing?.optionCodes[option] ?? String(index + 1);
+          while (usedCodes.has(code.toLocaleLowerCase())) code = String(index + 1 + usedCodes.size);
+          usedCodes.add(code.toLocaleLowerCase());
+          nextCodes[option] = code;
+        });
+        this.existing.name = name;
+        this.existing.kind = this.kind;
+        this.existing.options = this.kind === "select" ? options : [];
+        this.existing.optionCodes = this.kind === "select" ? nextCodes : {};
+        this.existing.defaultValue = this.kind === "select" ? (options[0] ?? "") : "";
+        if (this.kind === "select" && !wasSelect) {
+          this.existing.initialOptions = [...options];
+          this.existing.initialOptionCodes = { ...nextCodes };
+          this.existing.initialDefaultValue = options[0] ?? "";
+        }
+        const key = customFieldKey(this.existing.id);
+        if (!this.plugin.settings.tableColumnLabels[key] || this.plugin.settings.tableColumnLabels[key] === oldName) this.plugin.settings.tableColumnLabels[key] = name;
+      } else {
+        const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        const optionCodes = Object.fromEntries(options.map((option, index) => [option, String(index + 1)]));
+        const field: CustomFieldConfig = {
+          id,
+          name,
+          property: name,
+          kind: this.kind,
+          options: this.kind === "select" ? options : [],
+          optionCodes: this.kind === "select" ? optionCodes : {},
+          defaultValue: this.kind === "select" ? (options[0] ?? "") : "",
+          initialOptions: this.kind === "select" ? [...options] : [],
+          initialOptionCodes: this.kind === "select" ? { ...optionCodes } : {},
+          initialDefaultValue: this.kind === "select" ? (options[0] ?? "") : "",
+          enabled: true
+        };
+        const key = customFieldKey(id);
+        this.plugin.settings.customFields.push(field);
+        const attachmentIndex = this.plugin.settings.optionFieldOrder.indexOf("attachments");
+        this.plugin.settings.optionFieldOrder.splice(attachmentIndex >= 0 ? attachmentIndex : this.plugin.settings.optionFieldOrder.length, 0, key);
+        const actionIndex = this.plugin.settings.tableColumnOrder.indexOf("actions");
+        this.plugin.settings.tableColumnOrder.splice(actionIndex >= 0 ? actionIndex : this.plugin.settings.tableColumnOrder.length, 0, key);
+        this.plugin.settings.visibleTableColumns.push(key);
+        this.plugin.settings.editableColumns.push(key);
+        this.plugin.settings.tableColumnLabels[key] = name;
+      }
+      await this.plugin.saveSettingsQuietly();
+      this.close();
+      this.onSaved();
+    })(); });
+    window.setTimeout(() => nameSetting.controlEl.querySelector<HTMLInputElement>("input")?.focus(), 50);
+    void typeSetting;
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+}
+
 class CommunityPanelModal extends Modal {
   constructor(
     app: App,
@@ -627,7 +788,10 @@ class LanguagePackModal extends Modal {
           return;
         }
         button.setButtonText(removed ? "恢复" : "删除");
-        if (!removed) button.setDestructive();
+        if (!removed) {
+          button.setDestructive();
+          button.buttonEl.addClass("bookkeeping-danger-button");
+        }
         button.onClick(() => { void (async () => {
           this.plugin.settings.disabledLanguages = removed
             ? this.plugin.settings.disabledLanguages.filter((value) => value !== language)
@@ -641,6 +805,183 @@ class LanguagePackModal extends Modal {
       });
     }
     this.plugin.applyLanguage(this.modalEl);
+  }
+}
+
+class DeleteCustomFieldModal extends Modal {
+  constructor(app: App, private readonly field: CustomFieldConfig, private readonly onConfirm: (clearHistory: boolean) => void) { super(app); }
+
+  onOpen(): void {
+    this.modalEl.addClass("bookkeeping-modal");
+    this.setTitle("删除录入字段");
+    this.contentEl.createEl("p", { text: `确定删除录入字段“${this.field.name}”吗？` });
+    this.contentEl.createEl("p", {
+      text: `“仅删除配置”会保留原有Markdown中的“${this.field.property}”属性；“删除并清理历史账目”会从所有原有账目中永久移除该属性。`,
+      cls: "setting-item-description"
+    });
+    const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
+    new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
+    const removeConfig = new ButtonComponent(actions).setButtonText("仅删除配置");
+    removeConfig.buttonEl.addClass("bookkeeping-danger-button");
+    removeConfig.onClick(() => {
+      this.close();
+      this.onConfirm(false);
+    });
+    const removeHistory = new ButtonComponent(actions).setButtonText("删除并清理历史账目").setDestructive();
+    removeHistory.buttonEl.addClass("bookkeeping-danger-button");
+    removeHistory.onClick(() => {
+      this.close();
+      this.onConfirm(true);
+    });
+  }
+}
+
+class CustomSelectPresetModal extends Modal {
+  private draggedOption = "";
+
+  constructor(app: App, private readonly plugin: BookkeepingPlugin, private readonly fieldId: string) { super(app); }
+
+  onOpen(): void {
+    this.modalEl.addClass("bookkeeping-modal", "bookkeeping-preset-manager-modal", "bookkeeping-custom-preset-modal");
+    this.modalEl.toggleClass("is-mobile", Platform.isMobile);
+    this.render();
+  }
+
+  private field(): CustomFieldConfig | undefined {
+    return this.plugin.settings.customFields.find((field) => field.id === this.fieldId && field.kind === "select");
+  }
+
+  private render(): void {
+    const scroll = this.contentEl.scrollTop;
+    this.contentEl.empty();
+    const field = this.field();
+    if (!field) {
+      this.setTitle("预设不存在");
+      this.contentEl.createEl("p", { text: "该分类型字段已被删除或改为内容型。" });
+      return;
+    }
+    this.setTitle(`${field.name}预设`);
+    new Setting(this.contentEl).setName("默认录入值").addDropdown((dropdown) => dropdown
+      .addOptions(optionRecord(field.options))
+      .setValue(field.defaultValue)
+      .onChange((value) => { void (async () => {
+        field.defaultValue = value;
+        await this.plugin.saveSettingsQuietly();
+      })(); }));
+    const header = this.contentEl.createDiv({ cls: "bookkeeping-config-table-header" });
+    header.createSpan({ text: "名称" });
+    header.createSpan({ text: "编号" });
+    header.createSpan({ text: "删除" });
+    const list = this.contentEl.createDiv({ cls: "bookkeeping-preset-manager-list" });
+    for (const option of field.options) this.renderOptionRow(list, field, option);
+
+    const addRow = this.contentEl.createDiv({ cls: "bookkeeping-preset-add-row" });
+    addRow.createSpan({ cls: "bookkeeping-preset-add-spacer" });
+    const input = addRow.createEl("input", { type: "text", attr: { placeholder: "新预设名称", "aria-label": "新预设名称" } });
+    const codeInput = addRow.createEl("input", { type: "text", attr: { placeholder: "编号", "aria-label": "录入编号" } });
+    const add = addRow.createEl("button", { cls: "mod-cta", text: "添加", attr: { type: "button" } });
+    const commit = async (): Promise<void> => {
+      const value = input.value.trim();
+      const code = codeInput.value.trim();
+      if (!value || !code) return void this.plugin.notice("名称和编号不能为空");
+      if (field.options.includes(value)) return void this.plugin.notice("预设名称不能重复");
+      if (Object.values(field.optionCodes).some((item) => item.toLocaleLowerCase() === code.toLocaleLowerCase())) return void this.plugin.notice("同一组选项的编号不能重复");
+      field.options.push(value);
+      field.optionCodes[value] = code;
+      await this.plugin.saveSettingsQuietly();
+      this.render();
+    };
+    add.addEventListener("click", () => void commit());
+    [input, codeInput].forEach((element) => element.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") { event.preventDefault(); void commit(); }
+    }));
+    const actions = this.contentEl.createDiv({ cls: "bookkeeping-preset-finish-row" });
+    new ButtonComponent(actions).setButtonText("恢复默认").onClick(() => { void (async () => {
+      field.options = [...field.initialOptions];
+      field.optionCodes = { ...field.initialOptionCodes };
+      field.defaultValue = field.initialOptions.includes(field.initialDefaultValue) ? field.initialDefaultValue : (field.initialOptions[0] ?? "");
+      await this.plugin.saveSettingsQuietly();
+      this.render();
+    })(); });
+    new ButtonComponent(actions).setButtonText("完成").setCta().onClick(() => this.close());
+    this.contentEl.scrollTop = scroll;
+    this.plugin.applyLanguage(this.modalEl);
+  }
+
+  private renderOptionRow(list: HTMLElement, field: CustomFieldConfig, option: string): void {
+    const row = list.createDiv({ cls: "bookkeeping-preset-manager-row" });
+    row.dataset.key = option;
+    const grip = row.createSpan({ cls: "bookkeeping-setting-drag", attr: { title: "拖动排序" } });
+    setIcon(grip, "grip-vertical");
+    grip.draggable = true;
+    const input = row.createEl("input", { type: "text", value: option, attr: { "aria-label": "预设名称" } });
+    input.addEventListener("change", () => { void (async () => {
+      const value = input.value.trim();
+      if (!value || field.options.some((item) => item !== option && item === value)) {
+        this.plugin.notice(value ? "预设名称不能重复" : "预设名称不能为空");
+        input.value = option;
+        return;
+      }
+      const index = field.options.indexOf(option);
+      if (index >= 0) field.options[index] = value;
+      field.optionCodes[value] = field.optionCodes[option] ?? String(index + 1);
+      delete field.optionCodes[option];
+      if (field.defaultValue === option) field.defaultValue = value;
+      await this.plugin.store.renameCustomFieldValueGlobally(field.property, option, value);
+      await this.plugin.saveSettingsQuietly();
+      this.render();
+    })(); });
+    const code = row.createEl("input", { type: "text", value: field.optionCodes[option] ?? "", attr: { "aria-label": "录入编号" } });
+    code.addEventListener("change", () => { void (async () => {
+      const next = code.value.trim();
+      if (!next || field.options.some((item) => item !== option && field.optionCodes[item]?.toLocaleLowerCase() === next.toLocaleLowerCase())) {
+        this.plugin.notice(!next ? "编号不能为空" : "同一组选项的编号不能重复");
+        code.value = field.optionCodes[option] ?? "";
+        return;
+      }
+      field.optionCodes[option] = next;
+      await this.plugin.saveSettingsQuietly();
+    })(); });
+    const remove = row.createEl("button", { cls: "clickable-icon mod-warning", attr: { type: "button", "aria-label": `删除${option}` } });
+    setIcon(remove, "trash-2");
+    remove.disabled = field.options.length <= 1;
+    remove.addEventListener("click", () => { void (async () => {
+      field.options = field.options.filter((item) => item !== option);
+      delete field.optionCodes[option];
+      if (field.defaultValue === option) field.defaultValue = field.options[0] ?? "";
+      await this.plugin.saveSettingsQuietly();
+      this.render();
+    })(); });
+    grip.addEventListener("dragstart", () => { this.draggedOption = option; row.addClass("is-dragging"); });
+    grip.addEventListener("dragend", () => { this.draggedOption = ""; row.removeClass("is-dragging"); });
+    row.addEventListener("dragover", (event) => event.preventDefault());
+    row.addEventListener("drop", () => { void (async () => {
+      if (!this.draggedOption || this.draggedOption === option) return;
+      const from = field.options.indexOf(this.draggedOption);
+      const to = field.options.indexOf(option);
+      if (from < 0 || to < 0) return;
+      const [moved] = field.options.splice(from, 1);
+      if (moved !== undefined) field.options.splice(to, 0, moved);
+      await this.plugin.saveSettingsQuietly();
+      this.render();
+    })(); });
+    bindPointerSort({
+      root: list,
+      item: row,
+      handle: grip,
+      itemSelector: ".bookkeeping-preset-manager-row",
+      onCommit: async () => {
+        field.options = Array.from(list.querySelectorAll<HTMLElement>(".bookkeeping-preset-manager-row"))
+          .map((element) => element.dataset.key)
+          .filter((value): value is string => Boolean(value));
+        await this.plugin.saveSettingsQuietly();
+        this.render();
+      }
+    });
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
   }
 }
 
