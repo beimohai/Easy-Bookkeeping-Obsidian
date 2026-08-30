@@ -928,7 +928,8 @@ export class DashboardView extends ItemView {
       scheduleSearch();
     });
     search.addEventListener("input", (event) => {
-      if (composing || (event instanceof InputEvent && event.isComposing)) return;
+      const inputEvent = event as InputEvent;
+      if (composing || (inputEvent.instanceOf(InputEvent) && inputEvent.isComposing)) return;
       scheduleSearch();
     });
     const hasFilters = this.hasActiveFilters();

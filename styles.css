@@ -2777,6 +2777,49 @@ body .bookkeeping-modal.bookkeeping-entry-modal input[type="date"]::-webkit-cale
   padding: 5px;
 }
 
+@media (max-width: 600px) {
+  .bookkeeping-annual-charts-manager-modal .modal-content {
+    display: flex;
+    max-height: calc(100vh - 96px);
+    max-height: calc(100dvh - 96px);
+    min-height: 0;
+    box-sizing: border-box;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .bookkeeping-annual-charts-manager-modal .bookkeeping-chart-manager {
+    min-height: 0;
+    max-height: none;
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+
+  .bookkeeping-annual-manager-footer,
+  .bookkeeping-annual-chart-settings-actions {
+    display: grid;
+    width: 100%;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  .bookkeeping-annual-manager-footer {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bookkeeping-annual-chart-settings-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .bookkeeping-annual-manager-footer button,
+  .bookkeeping-annual-chart-settings-actions button {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+}
+
 .bookkeeping-period-modal {
   width: min(790px, calc(100vw - 20px));
 }

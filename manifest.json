@@ -1,9 +1,9 @@
 {
   "id": "easy-bookkeeping",
   "name": "Easy Bookkeeping",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "minAppVersion": "1.13.0",
-  "description": "本地优先的 Markdown 记账：快速录入、多维筛选、图表与 CSV。 Local-first Markdown bookkeeping with fast entry, filters, charts, and CSV.",
+  "description": "Local-first Markdown bookkeeping with fast entry, custom fields, filters, charts, annual statistics, and CSV import/export.",
   "author": "北漠海",
   "authorUrl": "https://github.com/beimohai",
   "isDesktopOnly": false

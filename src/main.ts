@@ -329,9 +329,9 @@ export default class BookkeepingPlugin extends Plugin {
     const tableColumnOrder = this.completeOrder(loaded?.tableColumnOrder, DEFAULT_SETTINGS.tableColumnOrder, customKeys);
     const validTableColumns = new Set<TableColumn>(tableColumnOrder);
     const visibleTableColumns = (loaded?.visibleTableColumns ?? DEFAULT_SETTINGS.visibleTableColumns)
-      .filter((column): column is TableColumn => validTableColumns.has(column as TableColumn));
+      .filter((column): column is TableColumn => validTableColumns.has(column));
     const editableColumns = (loaded?.editableColumns ?? DEFAULT_SETTINGS.editableColumns)
-      .filter((column): column is TableColumn => validTableColumns.has(column as TableColumn));
+      .filter((column): column is TableColumn => validTableColumns.has(column));
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...(loaded ?? {}),
@@ -1225,7 +1225,7 @@ const ANNUAL_METRICS: Record<AnnualChartMetric, string> = {
 
 class AnnualChartsManagerModal extends Modal {
   constructor(app: App, private readonly plugin: BookkeepingPlugin, private readonly onSaved: () => void) { super(app); }
-  onOpen(): void { this.modalEl.addClass("bookkeeping-modal"); this.render(); }
+  onOpen(): void { this.modalEl.addClass("bookkeeping-modal", "bookkeeping-annual-charts-manager-modal"); this.render(); }
   private render(): void {
     this.contentEl.empty(); this.setTitle("年度图表管理");
     const list = this.contentEl.createDiv({ cls: "bookkeeping-chart-manager" });
@@ -1238,7 +1238,7 @@ class AnnualChartsManagerModal extends Modal {
       eye.addEventListener("click", () => { void (async () => { chart.visible = !chart.visible; await this.plugin.saveSettingsQuietly(); this.render(); })(); });
       new ButtonComponent(controls).setIcon("settings-2").setTooltip("配置").onClick(() => new AnnualChartSettingsModal(this.app, this.plugin, chart, () => { this.onSaved(); this.render(); }).open());
     }
-    const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
+    const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions bookkeeping-annual-manager-footer" });
     new ButtonComponent(actions).setButtonText("添加图表").setIcon("plus").onClick(() => { void (async () => {
       this.plugin.settings.annualChartConfigs.push({ id: `annual-${Date.now()}`, title: "月份结余趋势", metric: "monthlyNet", visible: true });
       await this.plugin.saveSettingsQuietly(); this.onSaved(); this.render();
@@ -1251,11 +1251,10 @@ class AnnualChartSettingsModal extends Modal {
   private metric: AnnualChartMetric;
   constructor(app: App, private readonly plugin: BookkeepingPlugin, private readonly chart: AnnualChartConfig, private readonly onSaved: () => void) { super(app); this.metric = chart.metric; }
   onOpen(): void {
-    this.modalEl.addClass("bookkeeping-modal"); this.setTitle("配置年度图表");
+    this.modalEl.addClass("bookkeeping-modal", "bookkeeping-annual-chart-settings-modal"); this.setTitle("配置年度图表");
     new Setting(this.contentEl).setName("图表内容").addDropdown((dropdown) => dropdown.addOptions(ANNUAL_METRICS).setValue(this.metric).onChange((value) => this.metric = value as AnnualChartMetric));
-    const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions" });
+    const actions = this.contentEl.createDiv({ cls: "bookkeeping-modal-actions bookkeeping-annual-chart-settings-actions" });
     new ButtonComponent(actions).setButtonText("取消").onClick(() => this.close());
-    new ButtonComponent(actions).setButtonText("隐藏图表").setIcon("eye-off").onClick(() => { void (async () => { this.chart.visible = false; await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });
     const removeChart = new ButtonComponent(actions).setButtonText("删除图表").setDestructive();
     removeChart.buttonEl.addClass("bookkeeping-danger-button");
     removeChart.onClick(() => { void (async () => { this.plugin.settings.annualChartConfigs = this.plugin.settings.annualChartConfigs.filter((item) => item.id !== this.chart.id); await this.plugin.saveSettingsQuietly(); this.onSaved(); this.close(); })(); });

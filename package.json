@@ -1,7 +1,7 @@
 {
   "name": "easy-bookkeeping",
-  "version": "2.0.8",
-  "description": "A local-first bookkeeping plugin with fast entry, filters, export, and configurable dashboards",
+  "version": "2.0.9",
+  "description": "Local-first Markdown bookkeeping with fast entry, custom fields, filters, charts, annual statistics, and CSV import/export",
   "main": "main.js",
   "type": "module",
   "scripts": {

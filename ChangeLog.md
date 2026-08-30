@@ -1,5 +1,19 @@
 # 更新日志 Changelog
 
+* [V2.0.9](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.9) 2026-08-30
+  * 手机版年度图表
+    * 修复部分窄屏机型中年度图表管理底部“完成”按钮或配置页“保存”按钮溢出、无法操作的问题；管理列表改为独立滚动，底部操作按钮保持可见。
+    * 配置年度图表的操作按钮在手机端改为等宽三列，并移除该配置页中的“隐藏图表”按钮；图表显示与隐藏仍可在年度图表管理页控制。
+  * 审核兼容与发布信息
+    * 输入事件改用 Obsidian 跨窗口安全的 `instanceOf(InputEvent)`，并移除无意义的类型断言、返回组件的 void 回调和多余的 `TFile` 强制断言，不改变原有业务逻辑。
+    * 版本更新为 2.0.9，同步插件底部更新日期、Release notes、版本兼容表和新版市场介绍文案。
+  * Mobile annual charts
+    * Fixed narrow-screen layouts where the Manage Annual Charts “Done” button or chart-settings “Save” button could overflow and become unreachable. The chart list now scrolls independently while footer actions remain visible.
+    * Changed annual-chart settings actions to three equal-width mobile columns and removed the Hide Chart action from that dialog. Chart visibility remains available in Manage Annual Charts.
+  * Review compatibility and release metadata
+    * Adopted Obsidian's cross-window-safe `instanceOf(InputEvent)` and removed unnecessary type assertions, a component-returning void callback, and a redundant `TFile` cast without changing plugin behavior.
+    * Updated the version to 2.0.9 and synchronized the settings-footer date, release notes, compatibility map, and revised marketplace-description copy.
+
 * [V2.0.8](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.8) 2026-08-24
   * 自定义录入字段
     * 新增内容型与分类型录入字段，可加入表单、全键盘连续记账、账目明细、搜索和筛选；内容型留空显示“无”，分类型留空使用默认值。

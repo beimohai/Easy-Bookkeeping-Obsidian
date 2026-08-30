@@ -326,7 +326,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     details.createEl("a", { text: "Easy Bookkeeping", attr: { href: PROJECT_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: "作者：北漠海", attr: { href: BILIBILI_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: `版本号：${__PLUGIN_VERSION__}`, attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
-    details.createEl("a", { text: "更新日期：2026-08-24", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
+    details.createEl("a", { text: "更新日期：2026-08-30", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
     footer.createDiv({ text: "本项目基于 MIT License 开源", cls: "bookkeeping-plugin-footer-license" });
   }
 

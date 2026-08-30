@@ -74,7 +74,9 @@ export class TransactionModal extends Modal {
           setting.addText((text) => {
             text.setPlaceholder("可以留空").setValue(this.draft.customValues[config.id] ?? "");
             text.onChange((value) => this.draft.customValues[config.id] = value.trim());
-            customClearers.push(() => text.setValue(""));
+            customClearers.push(() => {
+              text.setValue("");
+            });
           });
         }
       } else if (field === "date") {

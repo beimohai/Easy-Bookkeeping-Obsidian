@@ -355,8 +355,7 @@ export class TransactionStore {
       const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
       return isFrontmatter(frontmatter) && [...propertySet].some((property) => property in frontmatter);
     });
-    for (let index = 0; index < files.length; index++) {
-      const file = files[index] as TFile;
+    for (const [index, file] of files.entries()) {
       await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
         for (const property of propertySet) delete (frontmatter as Frontmatter)[property];
       });
