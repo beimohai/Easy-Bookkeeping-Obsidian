@@ -1,7 +1,7 @@
 {
   "name": "easy-bookkeeping",
   "version": "2.0.9",
-  "description": "Local-first Markdown bookkeeping with fast entry, custom fields, filters, charts, annual statistics, and CSV import/export",
+  "description": "本地优先的 Markdown 记账插件，支持键盘连续录入与移动端表单记账。\n提供自定义字段、多维筛选、图表、年度统计及 CSV 导入导出。\nLocal-first Markdown bookkeeping with fast keyboard entry and mobile forms.\nIncludes custom fields, filters, charts, annual statistics, and CSV import/export.",
   "main": "main.js",
   "type": "module",
   "scripts": {
