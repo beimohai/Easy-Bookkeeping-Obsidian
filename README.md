@@ -106,7 +106,7 @@ The production build generates `main.js` in the project root.
    - Selecting an account balance, tag summary, or transaction tag applies the matching filter without changing the current page position or forcing a collapsed filter panel open.
 
 6. **Accounts, budgets, tags, and attachments**
-   - Support multiple accounts, custom account codes and order, transfers, editable monthly opening balances, and automatic carry-over;
+   - Support multiple accounts, custom account codes and order, transfers, editable monthly opening balances, and automatic carry-over; enable accounts and configure at least two accounts to record a transfer;
    - Set overall and category budgets and view their usage in budget progress charts;
    - Add or remove tags on individual transactions, create empty tags, or globally rename, delete, and batch-process tags and related transactions;
    - Tags can be entered directly in notes: leading `#tag` tokens are parsed as tags, spaces separate multiple tags, and parsed tags are not written to the note. Consecutive spaces count as one separator, while note text itself is preserved. After the first space-separated segment that does not start with `#`, everything after it remains note text, even if it contains more spaces or `#` characters;

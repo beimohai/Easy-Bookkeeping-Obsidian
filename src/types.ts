@@ -186,6 +186,10 @@ export interface BookkeepingSettings {
   customTags: string[];
 }
 
+export function canRecordTransfer(settings: Pick<BookkeepingSettings, "enableType" | "enableAccount" | "accounts">): boolean {
+  return settings.enableType && settings.enableAccount && settings.accounts.length > 1;
+}
+
 export interface TransactionDraft {
   date: string;
   time: string;

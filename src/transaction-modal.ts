@@ -1,5 +1,5 @@
 import { App, ButtonComponent, DropdownComponent, Modal, Notice, Setting, TFile, TextComponent, setIcon } from "obsidian";
-import { customFieldDefaultValue, customFieldId, isCustomFieldKey, type BookkeepingSettings, type Transaction, type TransactionDraft, type TransactionType } from "./types";
+import { canRecordTransfer, customFieldDefaultValue, customFieldId, isCustomFieldKey, type BookkeepingSettings, type Transaction, type TransactionDraft, type TransactionType } from "./types";
 import { currentTime, errorMessageZh, evaluateAmount, formatMoney, normalizeDate, parseNoteTags, today, uniqueStrings } from "./utils";
 import type { TransactionStore } from "./transaction-store";
 import { translate } from "./locales";
@@ -47,12 +47,21 @@ export class TransactionModal extends Modal {
     const optionSettings = new Map<string, Setting>();
     let refresh = (): void => {};
     const accounts = Object.fromEntries(this.settings.accounts.map((account) => [account.name, account.name]));
+    const transferAvailable = canRecordTransfer(this.settings);
     let titleInput: TextComponent | null = null;
     let amountInput: TextComponent | null = null;
     let noteInput: HTMLTextAreaElement | null = null;
     let tagInput: TextComponent | null = null;
     const customClearers: Array<() => void> = [];
     for (const field of this.settings.optionFieldOrder) {
+      if (!isCustomFieldKey(field)) {
+        if (field === "account" && !this.settings.enableAccount) continue;
+        if (field === "type" && !this.settings.enableType) continue;
+        if (field === "necessity" && !this.settings.enableNecessity) continue;
+        if (field === "category" && !this.settings.enableCategory) continue;
+        if (field === "note" && !this.settings.enableNote) continue;
+        if (field === "attachments" && !this.settings.enableEntryAttachments) continue;
+      }
       if (isCustomFieldKey(field)) {
         const config = this.settings.customFields.find((item) => item.id === customFieldId(field));
         if (!config?.enabled) continue;
@@ -99,15 +108,22 @@ export class TransactionModal extends Modal {
         optionSettings.set(field, setting);
       } else if (field === "type") {
         const setting = new Setting(content).setName("类型");
-        const availableTypes = this.settings.typeOrder.filter((type) => this.settings.enableAccount || type !== "转账");
-        const typeOptions = Object.fromEntries(availableTypes.map((type) => [type, this.settings.typeLabels[type] ?? type]));
-        setting.addDropdown((dropdown) => dropdown
-          .addOptions(typeOptions)
-          .setValue(this.draft.type)
-          .onChange((value) => {
+        const typeOptions = Object.fromEntries(this.settings.typeOrder.map((type) => [type, this.settings.typeLabels[type] ?? type]));
+        if (!transferAvailable && this.settings.typeOrder.includes("转账")) {
+          setting.setDesc(this.settings.enableAccount ? "转账需至少添加两个账户" : "转账需先启用账户，并至少添加两个账户");
+        }
+        setting.addDropdown((dropdown) => {
+          dropdown.addOptions(typeOptions);
+          const transferOption = dropdown.selectEl.querySelector<HTMLOptionElement>('option[value="转账"]');
+          if (transferOption && !transferAvailable) {
+            transferOption.disabled = true;
+            transferOption.textContent = `${this.settings.typeLabels["转账"] ?? "转账"}（暂不可用）`;
+          }
+          dropdown.setValue(this.draft.type).onChange((value) => {
             this.draft.type = value;
             refresh();
-          }));
+          });
+        });
         optionSettings.set(field, setting);
       } else if (field === "necessity") {
         const setting = new Setting(content).setName("必要性");
@@ -165,7 +181,7 @@ export class TransactionModal extends Modal {
       const isTransfer = this.draft.type === "转账";
       optionSettings.get("necessity")?.settingEl.toggleClass("bookkeeping-hidden", isTransfer);
       optionSettings.get("category")?.settingEl.toggleClass("bookkeeping-hidden", isTransfer);
-      targetAccountSetting.settingEl.toggleClass("bookkeeping-hidden", !isTransfer || !this.settings.enableAccount);
+      targetAccountSetting.settingEl.toggleClass("bookkeeping-hidden", !isTransfer || !transferAvailable);
       if (!isTransfer && categoryDropdown) {
         this.fillCategories(categoryDropdown, this.draft.type);
         this.draft.category = categoryDropdown.getValue();
@@ -226,7 +242,9 @@ export class TransactionModal extends Modal {
     if (!this.draft.title) errors.push("内容不得为空");
     if (!this.settings.allowNumericTitle && /^\d+$/.test(this.draft.title)) errors.push("内容不能为纯数字");
     if (this.settings.enableAccount && !this.draft.account) errors.push("请选择账户");
-    if (this.draft.type === "转账" && (!this.draft.targetAccount || this.draft.targetAccount === this.draft.account)) {
+    if (this.draft.type === "转账" && !canRecordTransfer(this.settings)) {
+      errors.push("转账需启用账户并至少添加两个账户");
+    } else if (this.draft.type === "转账" && (!this.draft.targetAccount || this.draft.targetAccount === this.draft.account)) {
       errors.push("转出账户和转入账户不能相同");
     }
     if (!this.draft.expression.trim() && this.settings.allowEmptyAmount) {
@@ -366,12 +384,15 @@ export class TransactionModal extends Modal {
     const month = /^\d{4}-\d{2}$/.test(this.targetMonth) ? this.targetMonth : today().slice(0, 7);
     const days = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
     const day = String(Math.min(Number(today().slice(8, 10)), days)).padStart(2, "0");
+    const type = canRecordTransfer(this.settings) || this.settings.defaultType !== "转账"
+      ? this.settings.defaultType
+      : this.settings.typeOrder.find((value) => value !== "转账") ?? "支出";
     return {
       date: `${month}-${day}`,
       time: currentTime(),
-      type: this.settings.enableAccount ? this.settings.defaultType : (this.settings.defaultType === "转账" ? "支出" : this.settings.defaultType),
+      type,
       necessity: this.settings.defaultNecessity,
-      category: this.settings.enableCategory ? (this.settings.typeEffects[this.settings.defaultType] === "positive" ? this.settings.defaultIncomeCategory : this.settings.defaultCategory) : "未分类",
+      category: this.settings.enableCategory ? (this.settings.typeEffects[type] === "positive" ? this.settings.defaultIncomeCategory : this.settings.defaultCategory) : "未分类",
       account,
       targetAccount: this.settings.enableAccount ? (accountNames.find((name) => name !== account) ?? account) : "",
       title: "",

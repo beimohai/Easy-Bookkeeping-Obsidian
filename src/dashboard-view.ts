@@ -1,7 +1,7 @@
 import { App, ButtonComponent, ItemView, Menu, Modal, Platform, Setting, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import type BookkeepingPlugin from "./main";
 import type { AccountConfig, BookkeepingSettings, CalendarMetric, ChartKind, ChartType, CustomFieldKey, DashboardChartConfig, DashboardFilterState, HeaderAction, Necessity, PieMetric, TableColumn, TagMetric, TagSort, Transaction, TransactionDraft, TransactionType, TrendMetric } from "./types";
-import { customFieldDefaultValue, customFieldId, customFieldKey, isCustomFieldKey } from "./types";
+import { canRecordTransfer, customFieldDefaultValue, customFieldId, customFieldKey, isCustomFieldKey } from "./types";
 import { currentMonth, errorMessageZh, evaluateAmount, formatDateDisplay, formatMoney, formatMonthDisplay, formatWeekdayLabels, monthOf, normalizeDate, roundMoney } from "./utils";
 import { bindPointerSort } from "./pointer-sort";
 
@@ -1701,7 +1701,7 @@ export class DashboardView extends ItemView {
       if (this.canInlineEdit("title")) this.renderInlineText(cell, item, "title", item.title);
       else cell.createSpan({ text: item.title, attr: { title: item.title }, cls: "bookkeeping-cell-ellipsis bookkeeping-user-text" });
     } else if (column === "type") {
-      const typeOptions = this.plugin.settings.typeOrder.filter((type) => this.plugin.settings.enableAccount && this.plugin.settings.accounts.length > 1 || type !== "转账");
+      const typeOptions = this.plugin.settings.typeOrder.filter((type) => canRecordTransfer(this.plugin.settings) || type !== "转账");
       if (this.canInlineEdit("type")) this.renderInlineChoice(cell, item, "type", typeOptions, item.type, `bookkeeping-type bookkeeping-type-${item.type}`, (value) => this.plugin.settings.typeLabels[value] ?? value);
       else cell.createSpan({ text: this.plugin.settings.typeLabels[item.type], cls: `bookkeeping-type bookkeeping-type-${item.type}` });
     } else if (column === "necessity") {
@@ -2763,7 +2763,7 @@ class BulkEditModal extends Modal {
       text.onChange((value) => this.changes.date = value || undefined);
     });
     const typeOptions: Record<string, string> = { "": "不修改" };
-    this.settings.typeOrder.filter((type) => type !== "转账" || this.settings.enableAccount && this.settings.accounts.length > 1).forEach((type) => typeOptions[type] = this.settings.typeLabels[type] ?? type);
+    this.settings.typeOrder.filter((type) => type !== "转账" || canRecordTransfer(this.settings)).forEach((type) => typeOptions[type] = this.settings.typeLabels[type] ?? type);
     new Setting(this.contentEl).setName("类型").addDropdown((dropdown) => dropdown.addOptions(typeOptions).onChange((value) => this.changes.type = value || undefined));
     const necessityOptions: Record<string, string> = { "": "不修改" };
     for (const value of this.settings.necessityOrder) necessityOptions[value] = this.settings.necessityLabels[value] ?? value;

@@ -1,5 +1,17 @@
 # 更新日志 Changelog
 
+* [V2.0.10](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.10) 2026-08-30
+  * 转账录入
+    * 修复手机账目面板中账户字段已显示、但“转账”类型因账户条件被隐藏的界面矛盾。
+    * 统一普通录入、全键盘连续记账、账目行内编辑和批量修改的转账可用条件：需启用类型和账户功能，并至少配置两个账户。
+    * 条件未满足时，普通录入面板保留“转账（暂不可用）”并说明启用条件；新建账目不会再错误地以不可用的“转账”作为默认类型。
+    * 更新中英文 README，说明录入转账需要启用账户并配置至少两个账户。
+  * Transfer entry
+    * Fixed the inconsistent mobile editor state where the account field could be shown while the Transfer type was hidden by account requirements.
+    * Unified transfer availability across standard entry, keyboard entry, inline transaction editing, and bulk editing: type and account features must be enabled and at least two accounts must be configured.
+    * When unavailable, the standard editor keeps a disabled “Transfer (unavailable)” option with the requirement explained, and new transactions no longer default to an unavailable Transfer type.
+    * Updated both READMEs to explain that recording a transfer requires enabled accounts and at least two configured accounts.
+
 * [V2.0.9](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.9) 2026-08-30
   * 手机版年度图表
     * 修复部分窄屏机型中年度图表管理底部“完成”按钮或配置页“保存”按钮溢出、无法操作的问题；管理列表改为独立滚动，底部操作按钮保持可见。

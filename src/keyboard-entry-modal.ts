@@ -1,6 +1,6 @@
 import { App, Modal, Notice } from "obsidian";
 import type { BookkeepingSettings, CustomFieldConfig, EntryField, TransactionDraft } from "./types";
-import { ENTRY_FIELD_LABELS, customFieldDefaultValue, customFieldId, isCustomFieldKey } from "./types";
+import { ENTRY_FIELD_LABELS, canRecordTransfer, customFieldDefaultValue, customFieldId, isCustomFieldKey } from "./types";
 import type { TransactionStore } from "./transaction-store";
 import { currentMonth, currentTime, errorMessageZh, evaluateAmount, formatMoney, formatMonthDisplay, parseNoteTags, today } from "./utils";
 import { translate } from "./locales";
@@ -181,7 +181,7 @@ export class KeyboardEntryModal extends Modal {
       else if (field === "necessity" && this.settings.enableNecessity && this.draft.type !== "转账") result.push(field);
       else if (field === "attachments" && this.settings.enableEntryAttachments) result.push(field);
     }
-    if (this.draft.type === "转账" && this.settings.enableAccount) result.push("targetAccount");
+    if (this.draft.type === "转账" && canRecordTransfer(this.settings)) result.push("targetAccount");
     return result;
   }
 
@@ -191,7 +191,7 @@ export class KeyboardEntryModal extends Modal {
       return field?.kind === "select" ? field.options : [];
     }
     if (step === "account" || step === "targetAccount") return this.settings.accounts.map((account) => account.name);
-    if (step === "type") return this.settings.typeOrder.filter((type) => this.settings.enableAccount || type !== "转账").map((type) => this.settings.typeLabels[type] ?? type);
+    if (step === "type") return this.settings.typeOrder.filter((type) => canRecordTransfer(this.settings) || type !== "转账").map((type) => this.settings.typeLabels[type] ?? type);
     if (step === "necessity") return this.settings.necessityOrder.map((value) => this.settings.necessityLabels[value] ?? value);
     if (step === "category") return this.settings.typeEffects[this.draft.type] === "positive" ? this.settings.incomeCategories : this.settings.categories;
     return [];
@@ -390,11 +390,14 @@ export class KeyboardEntryModal extends Modal {
   private newDraft(previous?: TransactionDraft): TransactionDraft {
     const accountNames = this.settings.accounts.map((account) => account.name);
     const account = previous?.account || (accountNames.includes(this.settings.defaultAccount) ? this.settings.defaultAccount : (accountNames[0] ?? ""));
-    const type = previous?.type ?? this.settings.defaultType;
+    const preferredType = previous?.type ?? this.settings.defaultType;
+    const type = canRecordTransfer(this.settings) || preferredType !== "转账"
+      ? preferredType
+      : this.settings.typeOrder.find((value) => value !== "转账") ?? "支出";
     return {
       date: `${this.month}-${this.lastDay}`,
       time: currentTime(),
-      type: this.settings.enableAccount ? type : (type === "转账" ? "支出" : type),
+      type,
       necessity: previous?.necessity ?? this.settings.defaultNecessity,
       category: this.settings.enableCategory ? (previous?.category || (this.settings.typeEffects[type] === "positive" ? this.settings.defaultIncomeCategory : this.settings.defaultCategory)) : "未分类",
       account,

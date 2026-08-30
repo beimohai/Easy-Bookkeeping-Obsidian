@@ -1,17 +1,16 @@
-# Easy Bookkeeping 2.0.9
+# Easy Bookkeeping 2.0.10
 
 ## 中文
 
-Easy Bookkeeping 2.0.9 重点修复手机版年度图表管理与配置弹窗的窄屏操作问题，并处理 Obsidian 审核中的安全兼容写法。
+Easy Bookkeeping 2.0.10 修复了手机账目面板中“转账”类型的可见性与可用性问题，并统一所有录入和编辑入口的转账条件。
 
 ### 更新内容
 
-- 修复部分窄屏机型中“年度图表管理”的“完成”按钮可能超出可视范围的问题；图表列表改为独立滚动，底部“添加图表 / 完成”操作区保持可见。
-- 修复“配置年度图表”操作按钮在窄屏上横向溢出的问题，手机端改为等宽三列布局。
-- 移除“配置年度图表”弹窗中的“隐藏图表”按钮；图表显示与隐藏仍可在“年度图表管理”中通过眼睛按钮控制。
-- 输入事件改用 Obsidian 跨窗口安全的 `instanceOf(InputEvent)`，避免跨窗口环境中原生 `instanceof` 判断失效。
-- 移除两处无意义的类型断言、一个返回组件的 void 回调和一个多余的 `TFile` 强制断言，不改变原有业务逻辑。
-- 版本更新为 2.0.9，同步插件底部更新日期、版本兼容表和新版插件市场介绍文案。
+- 修复手机账目面板中账户字段已显示、但“转账”类型因账户条件被隐藏的界面矛盾。
+- 统一普通录入、全键盘连续记账、账目行内编辑和批量修改的转账可用条件：需启用类型和账户功能，并至少配置两个账户。
+- 条件未满足时，普通录入面板保留“转账（暂不可用）”并明确提示原因；满足条件后可正常选择，并显示转入账户。
+- 防止新建账目在转账不可用时仍沿用“转账”默认类型，改为使用第一个可用的非转账类型。
+- 更新中英文 README，说明录入转账需要启用账户并配置至少两个账户。
 
 ### Release 文件
 
@@ -21,16 +20,15 @@ Easy Bookkeeping 2.0.9 重点修复手机版年度图表管理与配置弹窗的
 
 ## English
 
-Easy Bookkeeping 2.0.9 fixes narrow-screen controls in annual-chart management and settings, while adopting safer Obsidian review-compatible type checks.
+Easy Bookkeeping 2.0.10 fixes Transfer-type visibility and availability in the mobile transaction editor, and unifies transfer requirements across every entry and editing path.
 
 ### Changes
 
-- Fixed narrow-screen devices where the Manage Annual Charts “Done” button could move outside the visible area. The chart list now scrolls independently while the Add Chart and Done footer remains visible.
-- Prevented annual-chart settings actions from overflowing horizontally by using three equal-width mobile columns.
-- Removed the Hide Chart action from the annual-chart settings dialog. Chart visibility remains available through the eye control in Manage Annual Charts.
-- Replaced native `instanceof InputEvent` with Obsidian's cross-window-safe `instanceOf(InputEvent)` check.
-- Removed two unnecessary type assertions, a component-returning void callback, and a redundant `TFile` cast without changing existing behavior.
-- Updated the version to 2.0.9 and synchronized the settings-footer date, compatibility map, and revised marketplace-description copy.
+- Fixed the inconsistent mobile editor state where the account field could be visible while the Transfer type was hidden by account requirements.
+- Unified transfer availability across standard entry, keyboard entry, inline transaction editing, and bulk editing: type and account features must be enabled and at least two accounts must be configured.
+- When unavailable, the standard editor retains a disabled “Transfer (unavailable)” option with an explanation. Once requirements are met, it can be selected normally and shows the target-account field.
+- Prevented new transactions from retaining Transfer as their default type when transfers are unavailable; the first available non-transfer type is used instead.
+- Updated both READMEs to explain that recording a transfer requires enabled accounts and at least two configured accounts.
 
 ### Release assets
 
