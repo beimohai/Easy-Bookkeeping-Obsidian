@@ -1,5 +1,5 @@
 import { App, TFile, normalizePath, parseYaml, stringifyYaml } from "obsidian";
-import { customFieldDefaultValue, customFieldKey, isReservedTransactionProperty } from "./types";
+import { canRecordTransfer, customFieldDefaultValue, customFieldKey, isReservedTransactionProperty, usableDefaultType } from "./types";
 import type { BookkeepingSettings, CustomFieldConfig, EntryField, MonthSummary, Transaction, TransactionDraft } from "./types";
 import { errorMessageZh, escapeCsv, monthOf, normalizeDate, normalizeTime, parseCsv, roundMoney, safeFolder, sanitizeFileName } from "./utils";
 
@@ -130,7 +130,8 @@ export class TransactionStore {
     const dateChanged = draft.date !== transaction.date;
     await this.app.fileManager.processFrontMatter(transaction.file, (frontmatter) => {
       const properties = frontmatter as Frontmatter;
-      const next = this.toFrontmatter(draft);
+      const preserveExistingTransfer = transaction.type === "转账" && draft.type === "转账";
+      const next = this.toFrontmatter(draft, preserveExistingTransfer);
       delete properties["日期"];
       delete properties["时刻"];
       for (const key of ["记账插件", "账目ID", "类型", "标签", "分类", "账户", "目标账户", "内容", "金额", "算式", "备注", "附件", "tags"]) delete properties[key];
@@ -591,24 +592,27 @@ export class TransactionStore {
         const amountText = get("amount").replace(/[￥¥$€,\s]/g, "").replace(/^\((.*)\)$/, "-$1");
         const signedAmount = Number(amountText);
         if (!Number.isFinite(signedAmount) || signedAmount === 0) throw new Error("金额必须是非零数字");
+        const settings = this.getSettings();
         const rawType = get("type").toLocaleLowerCase("zh-CN");
         const type: Transaction["type"] = /收入|income|入账|收款/.test(rawType) ? "收入"
           : /转账|transfer/.test(rawType) ? "转账"
           : /支出|expense|付款|消费/.test(rawType) ? "支出"
-          : signedAmount < 0 ? "支出" : this.getSettings().defaultType === "转账" ? "支出" : this.getSettings().defaultType;
+          : signedAmount < 0 ? "支出" : usableDefaultType(settings);
         const title = get("title") || get("note") || "CSV导入账目";
         const timeText = get("time") || rawDate;
         const directTime = timeText.match(/^(\d{1,2}):(\d{2})$/);
         if (directTime && (Number(directTime[1]) > 23 || Number(directTime[2]) > 59)) throw new Error("时间无效");
         const time = directTime ? `${String(Number(directTime[1])).padStart(2, "0")}:${directTime[2]}` : normalizeTime(timeText);
         const amount = Math.abs(roundMoney(signedAmount));
-        const settings = this.getSettings();
         const validAccounts = new Set(settings.accounts.map((account) => account.name));
         const rawAccount = get("account") || settings.defaultAccount;
         const account = normalizeMetadata && !validAccounts.has(rawAccount) ? settings.defaultAccount : rawAccount;
         const rawTargetAccount = get("targetAccount");
         const targetAccount = normalizeMetadata && rawTargetAccount && !validAccounts.has(rawTargetAccount)
           ? (settings.accounts.find((item) => item.name !== account)?.name ?? "") : rawTargetAccount;
+        if (type === "转账" && !canRecordTransfer(settings)) {
+          throw new Error("转账需启用类型和账户功能，并至少添加两个账户");
+        }
         if (type === "转账" && (!targetAccount || targetAccount === account)) throw new Error("转账缺少有效的目标账户");
         const rawCategory = get("category") || "未分类";
         const positiveType = this.typeEffect(type) === "positive";
@@ -757,8 +761,16 @@ export class TransactionStore {
     };
   }
 
-  private toFrontmatter(draft: TransactionDraft): Frontmatter {
+  private toFrontmatter(draft: TransactionDraft, preserveExistingTransfer = false): Frontmatter {
     const settings = this.getSettings();
+    const account = draft.account || settings.defaultAccount;
+    const isTransfer = draft.type === "转账";
+    if (isTransfer && !preserveExistingTransfer && !canRecordTransfer(settings)) {
+      throw new Error("转账需启用类型和账户功能，并至少添加两个账户");
+    }
+    if (isTransfer && (!draft.targetAccount || draft.targetAccount === account)) {
+      throw new Error("转账缺少有效的目标账户");
+    }
     const note = !draft.note || draft.note === "无" ? "" : draft.note.trim();
     const tags = draft.tags.filter((tag) => tag.replace(/^#/, "").trim() !== "记账");
     const customProperties = new Map(settings.customFields
@@ -770,11 +782,11 @@ export class TransactionStore {
     return {
       "记账插件": true,
       "时间": `${draft.date} ${draft.time}`,
-      ...(settings.enableType ? { "类型": draft.type } : {}),
-      ...(settings.enableNecessity && draft.type !== "转账" ? { "标签": draft.necessity } : {}),
-      ...(settings.enableCategory && draft.type !== "转账" ? { "分类": draft.category || "未分类" } : {}),
-      ...(settings.enableAccount ? { "账户": draft.account || settings.defaultAccount } : {}),
-      ...(settings.enableAccount && draft.type === "转账" ? { "目标账户": draft.targetAccount } : {}),
+      ...(settings.enableType || preserveExistingTransfer ? { "类型": draft.type } : {}),
+      ...(settings.enableNecessity && !isTransfer ? { "标签": draft.necessity } : {}),
+      ...(settings.enableCategory && !isTransfer ? { "分类": draft.category || "未分类" } : {}),
+      ...(settings.enableAccount || preserveExistingTransfer ? { "账户": account } : {}),
+      ...(isTransfer && (settings.enableAccount || preserveExistingTransfer) ? { "目标账户": draft.targetAccount } : {}),
       "内容": draft.title,
       "金额": roundMoney(draft.amount),
       ...(settings.enableNote && settings.saveExpressionInNote ? { "算式": this.normalizedExpression(draft) } : {}),

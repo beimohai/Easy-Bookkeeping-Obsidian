@@ -190,6 +190,11 @@ export function canRecordTransfer(settings: Pick<BookkeepingSettings, "enableTyp
   return settings.enableType && settings.enableAccount && settings.accounts.length > 1;
 }
 
+export function usableDefaultType(settings: Pick<BookkeepingSettings, "defaultType" | "typeOrder" | "enableType" | "enableAccount" | "accounts">): TransactionType {
+  if (settings.defaultType !== "转账" || canRecordTransfer(settings)) return settings.defaultType;
+  return settings.typeOrder.find((type) => type !== "转账") ?? "支出";
+}
+
 export interface TransactionDraft {
   date: string;
   time: string;

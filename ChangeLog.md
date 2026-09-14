@@ -1,15 +1,17 @@
 # 更新日志 Changelog
 
-* [V2.0.10](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.10) 2026-08-30
+* [V2.0.11](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.11) 2026-09-14
   * 转账录入
     * 修复手机账目面板中账户字段已显示、但“转账”类型因账户条件被隐藏的界面矛盾。
     * 统一普通录入、全键盘连续记账、账目行内编辑和批量修改的转账可用条件：需启用类型和账户功能，并至少配置两个账户。
     * 条件未满足时，普通录入面板保留“转账（暂不可用）”并说明启用条件；新建账目不会再错误地以不可用的“转账”作为默认类型。
+    * CSV 导入与底层 Markdown 写入也会拒绝不满足上述条件或缺少有效转入账户的转账，防止绕过界面限制写入无效数据。
     * 更新中英文 README，说明录入转账需要启用账户并配置至少两个账户。
   * Transfer entry
     * Fixed the inconsistent mobile editor state where the account field could be shown while the Transfer type was hidden by account requirements.
     * Unified transfer availability across standard entry, keyboard entry, inline transaction editing, and bulk editing: type and account features must be enabled and at least two accounts must be configured.
     * When unavailable, the standard editor keeps a disabled “Transfer (unavailable)” option with the requirement explained, and new transactions no longer default to an unavailable Transfer type.
+    * CSV import and the Markdown write boundary now reject transfers that do not meet these requirements or lack a valid target account, preventing invalid data from bypassing the UI.
     * Updated both READMEs to explain that recording a transfer requires enabled accounts and at least two configured accounts.
 
 * [V2.0.9](https://github.com/beimohai/Easy-Bookkeeping-Obsidian/releases/tag/2.0.9) 2026-08-30

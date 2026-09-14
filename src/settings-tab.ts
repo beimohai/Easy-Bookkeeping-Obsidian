@@ -2,7 +2,7 @@ import { App, ButtonComponent, Modal, Platform, PluginSettingTab, Setting, setIc
 import type { SettingDefinitionItem } from "obsidian";
 import type BookkeepingPlugin from "./main";
 import type { CustomFieldConfig, CustomFieldKind, EntryField, Language, Necessity, TableColumn, TransactionType, TypeEffect } from "./types";
-import { DEFAULT_SETTINGS, ENTRY_FIELD_LABELS, TABLE_COLUMN_LABELS, customFieldId, customFieldKey, isCustomFieldKey, isReservedTransactionProperty } from "./types";
+import { DEFAULT_SETTINGS, ENTRY_FIELD_LABELS, TABLE_COLUMN_LABELS, canRecordTransfer, customFieldId, customFieldKey, isCustomFieldKey, isReservedTransactionProperty, usableDefaultType } from "./types";
 import qqGroupUrl from "./assets/community/qq-group.jpg";
 import sponsorQrUrl from "./assets/community/support.png";
 import { BILIBILI_URL, ISSUES_URL, PROJECT_URL, RELEASES_URL } from "./branding";
@@ -326,7 +326,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
     details.createEl("a", { text: "Easy Bookkeeping", attr: { href: PROJECT_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: "作者：北漠海", attr: { href: BILIBILI_URL, target: "_blank", rel: "noopener" } });
     details.createEl("a", { text: `版本号：${__PLUGIN_VERSION__}`, attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
-    details.createEl("a", { text: "更新日期：2026-08-30", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
+    details.createEl("a", { text: "更新日期：2026-09-14", attr: { href: RELEASES_URL, target: "_blank", rel: "noopener" } });
     footer.createDiv({ text: "本项目基于 MIT License 开源", cls: "bookkeeping-plugin-footer-license" });
   }
 
@@ -393,6 +393,7 @@ export class BookkeepingSettingTab extends PluginSettingTab {
           else if (field === "necessity") this.plugin.settings.enableNecessity = next;
           else if (field === "attachments") this.plugin.settings.enableEntryAttachments = next;
           else this.plugin.settings.enableNote = next;
+          this.plugin.settings.defaultType = usableDefaultType(this.plugin.settings);
           renderEye();
           await this.plugin.saveSettingsQuietly();
         })(); });
@@ -1025,7 +1026,7 @@ class PresetManagerModal extends Modal {
   }
 
   private renderDefaultSetting(): void {
-    if (this.group === "type") new Setting(this.contentEl).setName("默认录入值").addDropdown((dropdown) => dropdown.addOptions(optionRecord(this.plugin.settings.typeOrder, this.plugin.settings.typeLabels)).setValue(this.plugin.settings.defaultType).onChange((value) => { void (async () => {
+    if (this.group === "type") new Setting(this.contentEl).setName("默认录入值").addDropdown((dropdown) => dropdown.addOptions(optionRecord(this.plugin.settings.typeOrder.filter((type) => type !== "转账" || canRecordTransfer(this.plugin.settings)), this.plugin.settings.typeLabels)).setValue(usableDefaultType(this.plugin.settings)).onChange((value) => { void (async () => {
       this.plugin.settings.defaultType = value; await this.plugin.saveSettingsQuietly();
     })(); }));
     else if (this.group === "necessity") new Setting(this.contentEl).setName("默认录入值").addDropdown((dropdown) => dropdown.addOptions(optionRecord(this.plugin.settings.necessityOrder, this.plugin.settings.necessityLabels)).setValue(this.plugin.settings.defaultNecessity).onChange((value) => { void (async () => {

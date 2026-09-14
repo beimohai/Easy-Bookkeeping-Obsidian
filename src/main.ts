@@ -4,7 +4,7 @@ import { KeyboardEntryModal } from "./keyboard-entry-modal";
 import { BookkeepingSettingTab } from "./settings-tab";
 import { TransactionModal } from "./transaction-modal";
 import { TransactionStore, type CsvCustomFieldConfiguration } from "./transaction-store";
-import { DEFAULT_SETTINGS, customFieldKey, isCustomFieldKey, type AnnualChartConfig, type AnnualChartMetric, type BookkeepingSettings, type CalendarWeekStart, type ChartKind, type ChartMetric, type CustomFieldConfig, type DashboardChartConfig, type TableColumn, type Transaction, type TransactionType } from "./types";
+import { DEFAULT_SETTINGS, customFieldKey, isCustomFieldKey, usableDefaultType, type AnnualChartConfig, type AnnualChartMetric, type BookkeepingSettings, type CalendarWeekStart, type ChartKind, type ChartMetric, type CustomFieldConfig, type DashboardChartConfig, type TableColumn, type Transaction, type TransactionType } from "./types";
 import { currentMonth, errorMessageZh, formatMoney } from "./utils";
 import logoUrl from "./assets/branding/logo.png";
 import { I18nController, translate } from "./locales";
@@ -289,6 +289,7 @@ export default class BookkeepingPlugin extends Plugin {
     this.settings.enableCategory = configuration.builtInEnabled.category;
     this.settings.enableNote = configuration.builtInEnabled.note;
     this.settings.enableEntryAttachments = configuration.builtInEnabled.attachments;
+    this.settings.defaultType = usableDefaultType(this.settings);
     this.settings.customFields = newFields;
     this.settings.optionFieldOrder = [...configuration.optionFieldOrder];
     const nextColumns: TableColumn[] = this.settings.tableColumnOrder.filter((column) => !isCustomFieldKey(column));
@@ -433,7 +434,7 @@ export default class BookkeepingPlugin extends Plugin {
     delete settingsRecord["qqGroupQrPath"];
     delete (this.settings.keyboardShortcuts as unknown as Record<string, unknown>)["backKeyword"];
     if (this.settings.disabledLanguages.includes(this.settings.language)) this.settings.language = "zh-CN";
-    if (!this.settings.enableAccount && this.settings.defaultType === "转账") this.settings.defaultType = "支出";
+    this.settings.defaultType = usableDefaultType(this.settings);
     await this.saveData(this.settings);
   }
 

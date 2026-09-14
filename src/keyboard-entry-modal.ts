@@ -1,6 +1,6 @@
 import { App, Modal, Notice } from "obsidian";
 import type { BookkeepingSettings, CustomFieldConfig, EntryField, TransactionDraft } from "./types";
-import { ENTRY_FIELD_LABELS, canRecordTransfer, customFieldDefaultValue, customFieldId, isCustomFieldKey } from "./types";
+import { ENTRY_FIELD_LABELS, canRecordTransfer, customFieldDefaultValue, customFieldId, isCustomFieldKey, usableDefaultType } from "./types";
 import type { TransactionStore } from "./transaction-store";
 import { currentMonth, currentTime, errorMessageZh, evaluateAmount, formatMoney, formatMonthDisplay, parseNoteTags, today } from "./utils";
 import { translate } from "./locales";
@@ -390,10 +390,10 @@ export class KeyboardEntryModal extends Modal {
   private newDraft(previous?: TransactionDraft): TransactionDraft {
     const accountNames = this.settings.accounts.map((account) => account.name);
     const account = previous?.account || (accountNames.includes(this.settings.defaultAccount) ? this.settings.defaultAccount : (accountNames[0] ?? ""));
-    const preferredType = previous?.type ?? this.settings.defaultType;
-    const type = canRecordTransfer(this.settings) || preferredType !== "转账"
-      ? preferredType
-      : this.settings.typeOrder.find((value) => value !== "转账") ?? "支出";
+    const preferredType = previous?.type ?? usableDefaultType(this.settings);
+    const type = preferredType === "转账" && !canRecordTransfer(this.settings)
+      ? usableDefaultType(this.settings)
+      : preferredType;
     return {
       date: `${this.month}-${this.lastDay}`,
       time: currentTime(),

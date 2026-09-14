@@ -1,5 +1,5 @@
 import { App, ButtonComponent, DropdownComponent, Modal, Notice, Setting, TFile, TextComponent, setIcon } from "obsidian";
-import { canRecordTransfer, customFieldDefaultValue, customFieldId, isCustomFieldKey, type BookkeepingSettings, type Transaction, type TransactionDraft, type TransactionType } from "./types";
+import { canRecordTransfer, customFieldDefaultValue, customFieldId, isCustomFieldKey, usableDefaultType, type BookkeepingSettings, type Transaction, type TransactionDraft, type TransactionType } from "./types";
 import { currentTime, errorMessageZh, evaluateAmount, formatMoney, normalizeDate, parseNoteTags, today, uniqueStrings } from "./utils";
 import type { TransactionStore } from "./transaction-store";
 import { translate } from "./locales";
@@ -384,9 +384,7 @@ export class TransactionModal extends Modal {
     const month = /^\d{4}-\d{2}$/.test(this.targetMonth) ? this.targetMonth : today().slice(0, 7);
     const days = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
     const day = String(Math.min(Number(today().slice(8, 10)), days)).padStart(2, "0");
-    const type = canRecordTransfer(this.settings) || this.settings.defaultType !== "转账"
-      ? this.settings.defaultType
-      : this.settings.typeOrder.find((value) => value !== "转账") ?? "支出";
+    const type = usableDefaultType(this.settings);
     return {
       date: `${month}-${day}`,
       time: currentTime(),

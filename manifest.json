@@ -1,7 +1,7 @@
 {
   "id": "easy-bookkeeping",
   "name": "Easy Bookkeeping",
-  "version": "2.0.10",
+  "version": "2.0.11",
   "minAppVersion": "1.13.0",
   "description": "本地Markdown记账插件，支持手机与电脑双端记账，提供自定义字段、多维筛选、图表、统计等。 A local Markdown bookkeeping plugin supporting both mobile and desktop, with custom fields, multi-dimensional filters, charts, statistics, and more.",
   "author": "北漠海",
